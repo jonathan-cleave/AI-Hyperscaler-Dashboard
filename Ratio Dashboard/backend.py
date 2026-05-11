@@ -18,6 +18,12 @@ WORKBOOK_CANDIDATES = [
     BASE_DIR / "Data" / "All Ratios.xlsx",
     BASE_DIR / "All Ratios.xlsx",
 ]
+FIRMS_DATA_CANDIDATES = [
+    BASE_DIR.parent / "Data" / "firms.parquet",
+    BASE_DIR / "Data" / "firms.parquet",
+    BASE_DIR.parent / "Data" / "globalcompfirms2025.xlsx",
+    BASE_DIR / "Data" / "globalcompfirms2025.xlsx",
+]
 
 COMPANY_NAMES = {
     "AMZN": "Amazon",
@@ -61,6 +67,7 @@ NAV_ITEMS = [
     {"key": "leverage", "label": "Liquidity + Leverage", "href": "/leverage"},
     {"key": "cash_flow", "label": "Cash Flow", "href": "/cash-flow"},
     {"key": "valuation", "label": "Valuation", "href": "/valuation"},
+    {"key": "comparables", "label": "Comps Finder", "href": "/comparables"},
     {"key": "insights", "label": "Final Insights", "href": "/insights"},
 ]
 
@@ -94,6 +101,11 @@ PAGE_META = {
         "title": "Valuation and Implied Price",
         "eyebrow": "Comps plus workbook model",
         "subtitle": "Combines comparable-company assumptions from Comps with the MSFT Valuation worksheet and an interactive EV/EBITDA model.",
+    },
+    "comparables": {
+        "title": "Comparable Company Finder",
+        "eyebrow": "Distance-to pipeline",
+        "subtitle": "Input any ticker and rank the top four comparable companies using the numeric distance pipeline from comps.ipynb.",
     },
     "insights": {
         "title": "Comparison and Final Insights",
@@ -133,6 +145,21 @@ def find_workbook() -> Path:
             return candidate
     checked = ", ".join(str(path) for path in WORKBOOK_CANDIDATES)
     raise DashboardDataError(f"Could not find All Ratios.xlsx. Checked: {checked}")
+
+
+def find_firms_data() -> Path:
+    for candidate in FIRMS_DATA_CANDIDATES:
+        if candidate.exists():
+            return candidate
+    checked = ", ".join(str(path) for path in FIRMS_DATA_CANDIDATES)
+    raise DashboardDataError(f"Could not find firms comparable-company data. Checked: {checked}")
+
+
+def normalize_input_ticker(ticker: Any) -> str:
+    text = str(ticker or "").strip().upper()
+    if ":" in text:
+        text = text.split(":")[-1]
+    return text
 
 
 def clean_column_name(name: Any) -> str:
@@ -266,6 +293,175 @@ def latest_rows(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
     return df.sort_values(["Ticker Order", "Year"]).groupby("Ticker", as_index=False).tail(1)
+
+
+@lru_cache(maxsize=1)
+def prepare_comparable_firms() -> dict[str, Any]:
+    path = find_firms_data()
+    if path.suffix.lower() == ".parquet":
+        firms = pd.read_parquet(path)
+    else:
+        firms = pd.read_excel(path)
+
+    firms = firms.dropna(how="all").dropna(axis=1, how="all")
+    firms.columns = [clean_column_name(col) for col in firms.columns]
+
+    required = ["Company Name", "Exchange:Ticker", "Industry Group", "Primary Sector", "SIC Code", "Country"]
+    missing = [col for col in required if col not in firms.columns]
+    if missing:
+        raise DashboardDataError(f"Comparable-company data is missing required columns: {', '.join(missing)}")
+
+    firms["Exchange:Ticker"] = firms["Exchange:Ticker"].astype(str).str.strip().str.split(":").str[-1].str.upper()
+    firms = firms[firms["Exchange:Ticker"].notna() & (firms["Exchange:Ticker"] != "") & (firms["Exchange:Ticker"] != "NAN")]
+
+    similar_df = firms.copy()
+    similar_df = similar_df.drop(similar_df.columns[0:8], axis=1)
+    similar_df = similar_df.replace([np.inf, -np.inf], np.nan)
+    similar_df = similar_df.apply(pd.to_numeric, errors="coerce")
+    similar_df = similar_df.dropna(axis=1, how="all")
+    if similar_df.empty:
+        raise DashboardDataError("Comparable-company data has no numeric fields after applying the comps.ipynb descriptor drop.")
+
+    medians = similar_df.median(numeric_only=True)
+    similar_df = similar_df.fillna(medians).fillna(0)
+
+    means = similar_df.mean(axis=0)
+    stds = similar_df.std(axis=0, ddof=0).replace(0, np.nan)
+    scaled = ((similar_df - means) / stds).fillna(0)
+
+    return {
+        "path": str(path),
+        "firms": firms,
+        "scaled": scaled,
+        "feature_count": int(scaled.shape[1]),
+        "firm_count": int(firms.shape[0]),
+    }
+
+
+def comparable_mode_label(compare_by: str) -> str:
+    labels = {
+        "sic": "SIC",
+        "industry": "Industry",
+        "sector": "Sector",
+        "all": "All",
+        "none": "None",
+    }
+    return labels.get(compare_by, compare_by.title())
+
+
+def comparable_mask(firms: pd.DataFrame, target_row: pd.Series, compare_by: str) -> pd.Series:
+    if compare_by == "sic":
+        return firms["SIC Code"] == target_row["SIC Code"]
+    if compare_by == "industry":
+        return firms["Industry Group"] == target_row["Industry Group"]
+    if compare_by == "sector":
+        return firms["Primary Sector"] == target_row["Primary Sector"]
+    if compare_by == "all":
+        return (
+            (firms["SIC Code"] == target_row["SIC Code"])
+            & (firms["Industry Group"] == target_row["Industry Group"])
+            & (firms["Primary Sector"] == target_row["Primary Sector"])
+        )
+    if compare_by == "none":
+        return pd.Series(True, index=firms.index)
+    raise DashboardDataError("compare_by must be one of: sic, industry, sector, all, none.")
+
+
+def comparable_value(row: pd.Series, column: str) -> float | None:
+    if column not in row.index:
+        return None
+    return safe_float(row.get(column))
+
+
+def find_comparable_companies(ticker: Any, compare_by: str = "none", n_comps: int = 4) -> dict[str, Any]:
+    normalized_ticker = normalize_input_ticker(ticker)
+    compare_by = str(compare_by or "none").strip().lower()
+    n_comps = max(1, min(int(n_comps or 4), 12))
+
+    if not normalized_ticker:
+        raise DashboardDataError("Enter a ticker before running the comparable-company search.")
+
+    prepared = prepare_comparable_firms()
+    firms: pd.DataFrame = prepared["firms"]
+    scaled: pd.DataFrame = prepared["scaled"]
+
+    ticker_matches = firms.index[firms["Exchange:Ticker"] == normalized_ticker].tolist()
+    if not ticker_matches:
+        contains = firms[firms["Exchange:Ticker"].str.contains(normalized_ticker, na=False, regex=False)].head(8)
+        suggestions = contains["Exchange:Ticker"].dropna().astype(str).tolist()
+        message = f"Ticker {normalized_ticker} was not found in firms.parquet."
+        if suggestions:
+            message += f" Close matches: {', '.join(suggestions)}."
+        raise DashboardDataError(message)
+
+    target_idx = ticker_matches[0]
+    target_row = firms.loc[target_idx]
+    mask = comparable_mask(firms, target_row, compare_by)
+    filtered_df = firms[mask].copy()
+    candidate_idx = filtered_df.index
+
+    distances = np.linalg.norm(
+        scaled.loc[candidate_idx].values - scaled.loc[target_idx].values,
+        axis=1,
+    )
+
+    distance_col = f"Distance_to_{normalized_ticker}"
+    filtered_df[distance_col] = distances
+    top_comps = (
+        filtered_df[filtered_df["Exchange:Ticker"] != normalized_ticker]
+        .sort_values(distance_col)
+        .head(n_comps)
+    )
+
+    target_payload = {
+        "company_name": str(target_row.get("Company Name", normalized_ticker)),
+        "ticker": normalized_ticker,
+        "sic_code": str(target_row.get("SIC Code", "")),
+        "industry_group": str(target_row.get("Industry Group", "")),
+        "primary_sector": str(target_row.get("Primary Sector", "")),
+        "country": str(target_row.get("Country", "")),
+        "market_cap": comparable_value(target_row, "Market Cap (in US $)"),
+        "enterprise_value": comparable_value(target_row, "Enterprise Value (in US $)"),
+        "ev_ebitda": comparable_value(target_row, "EV/EBITDA"),
+        "ps": comparable_value(target_row, "PS"),
+        "net_margin": comparable_value(target_row, "Net Profit Margin"),
+    }
+
+    matches = []
+    for _, row in top_comps.iterrows():
+        matches.append(
+            {
+                "company_name": str(row.get("Company Name", "")),
+                "ticker": str(row.get("Exchange:Ticker", "")),
+                "sic_code": str(row.get("SIC Code", "")),
+                "industry_group": str(row.get("Industry Group", "")),
+                "primary_sector": str(row.get("Primary Sector", "")),
+                "country": str(row.get("Country", "")),
+                "distance": safe_float(row.get(distance_col)),
+                "market_cap": comparable_value(row, "Market Cap (in US $)"),
+                "enterprise_value": comparable_value(row, "Enterprise Value (in US $)"),
+                "ev_ebitda": comparable_value(row, "EV/EBITDA"),
+                "ps": comparable_value(row, "PS"),
+                "net_margin": comparable_value(row, "Net Profit Margin"),
+            }
+        )
+
+    return sanitize(
+        {
+            "ticker": normalized_ticker,
+            "compare_by": compare_by,
+            "compare_by_label": comparable_mode_label(compare_by),
+            "n_comps": n_comps,
+            "target": target_payload,
+            "matches": matches,
+            "universe_count": int(len(filtered_df)),
+            "feature_count": prepared["feature_count"],
+            "firm_count": prepared["firm_count"],
+            "data_source": prepared["path"],
+            "distance_column": distance_col,
+            "note": "Distances use the comps.ipynb pipeline: drop descriptor columns 0-7, coerce remaining fields to numeric, median-fill missing values, standardize, then rank Euclidean distance.",
+        }
+    )
 
 
 def records_by_metric(df: pd.DataFrame, metric: str) -> list[dict[str, Any]]:
@@ -1129,6 +1325,24 @@ def build_pages(
         ],
     }
 
+    pages["comparables"] = {
+        "default_ticker": "MSFT",
+        "default_compare_by": "none",
+        "options": [
+            {"value": "sic", "label": "SIC", "description": "Same SIC code"},
+            {"value": "industry", "label": "Industry", "description": "Same industry group"},
+            {"value": "sector", "label": "Sector", "description": "Same primary sector"},
+            {"value": "all", "label": "All", "description": "SIC, industry, and sector all match"},
+            {"value": "none", "label": "None", "description": "No categorical filter"},
+        ],
+        "pipeline_steps": [
+            "Load Data/firms.parquet and normalize Exchange:Ticker to plain ticker symbols.",
+            "Drop the first eight descriptor columns, then coerce the remaining columns to numeric fields.",
+            "Replace missing values with feature medians, standardize each feature, and compute Euclidean distance.",
+            "Filter by SIC, Industry, Sector, All, or None before ranking the top four matches.",
+        ],
+    }
+
     pages["insights"] = ranking_payload(ratios)
     return pages
 
@@ -1240,6 +1454,11 @@ def valuation():
     return render_dashboard("valuation", "valuation.html")
 
 
+@app.route("/comparables")
+def comparables():
+    return render_dashboard("comparables", "comparables.html")
+
+
 @app.route("/insights")
 def insights():
     return render_dashboard("insights", "insights.html")
@@ -1292,6 +1511,17 @@ def valuation_calculate():
         **inputs,
     )
     return jsonify(sanitize({"ticker": ticker, "display_ticker": model["display_ticker"], "inputs": inputs, "outputs": outputs}))
+
+
+@app.route("/api/comparables")
+def comparables_api():
+    ticker = request.args.get("ticker", "MSFT")
+    compare_by = request.args.get("compare_by", "none")
+    try:
+        result = find_comparable_companies(ticker=ticker, compare_by=compare_by, n_comps=4)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(result)
 
 
 def port_available(port: int) -> bool:

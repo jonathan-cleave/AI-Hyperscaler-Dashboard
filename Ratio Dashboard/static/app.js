@@ -16,11 +16,22 @@
     return `${sign}$${abs.toFixed(0)}M`;
   }
 
+  function moneyUsd(value) {
+    if (!isNumber(value)) return "n/a";
+    const sign = value < 0 ? "-" : "";
+    const abs = Math.abs(value);
+    if (abs >= 1000000000000) return `${sign}$${(abs / 1000000000000).toFixed(2)}T`;
+    if (abs >= 1000000000) return `${sign}$${(abs / 1000000000).toFixed(1)}B`;
+    if (abs >= 1000000) return `${sign}$${(abs / 1000000).toFixed(1)}M`;
+    return `${sign}$${abs.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  }
+
   function format(value, type) {
     if (!isNumber(value)) return "n/a";
     if (type === "percent") return `${(value * 100).toFixed(1)}%`;
     if (type === "multiple") return `${value.toFixed(1)}x`;
     if (type === "money_m") return moneyMillions(value);
+    if (type === "money_usd") return moneyUsd(value);
     if (type === "price") return `$${value.toFixed(2)}`;
     if (type === "rank") return `${value.toFixed(0)}`;
     return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
@@ -144,6 +155,8 @@
       options: commonOptions(chart.format)
     });
   }
+
+  let compsDistanceChart = null;
 
   function renderAllCharts() {
     (data.charts || []).forEach(renderLineChart);
@@ -338,6 +351,146 @@
     if (element) element.textContent = text;
   }
 
+  function escapeHtml(value) {
+    return String(value === null || value === undefined ? "" : value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function selectedCompareBy() {
+    const selected = document.querySelector('input[name="compare_by"]:checked');
+    return selected ? selected.value : "none";
+  }
+
+  function setCompsStatus(message, type) {
+    const status = document.getElementById("compsStatus");
+    if (!status) return;
+    status.textContent = message || "";
+    status.classList.toggle("error", type === "error");
+    status.classList.toggle("loading", type === "loading");
+  }
+
+  function renderTargetCard(result) {
+    const targetCard = document.getElementById("compsTargetCard");
+    if (!targetCard) return;
+    const target = result.target || {};
+    targetCard.innerHTML = `
+      <span class="thin-divider"></span>
+      <p class="eyebrow">Target company</p>
+      <h3>${escapeHtml(target.company_name || result.ticker)}</h3>
+      <div class="target-meta">
+        <span>${escapeHtml(target.ticker || result.ticker)}</span>
+        <span>SIC ${escapeHtml(target.sic_code || "n/a")}</span>
+        <span>${escapeHtml(target.primary_sector || "n/a")}</span>
+      </div>
+      <div class="metric-grid compact">
+        <div><span>Industry</span><strong>${escapeHtml(target.industry_group || "n/a")}</strong></div>
+        <div><span>Country</span><strong>${escapeHtml(target.country || "n/a")}</strong></div>
+        <div><span>Market cap</span><strong>${format(target.market_cap, "money_usd")}</strong></div>
+        <div><span>EV / EBITDA</span><strong>${format(target.ev_ebitda, "multiple")}</strong></div>
+      </div>
+    `;
+  }
+
+  function renderCompsResults(result) {
+    const container = document.getElementById("compsResults");
+    if (!container) return;
+    const matches = result.matches || [];
+    if (!matches.length) {
+      container.innerHTML = `<div class="chart-fallback">No comparable companies found for this filter.</div>`;
+      renderCompsDistanceChart(result);
+      return;
+    }
+    container.innerHTML = matches.map((match, index) => `
+      <article class="comp-match-card">
+        <div class="match-rank">${index + 1}</div>
+        <div class="match-body">
+          <div class="card-topline">
+            <span>${escapeHtml(match.ticker)}</span>
+            <small>Distance ${format(match.distance, "number")}</small>
+          </div>
+          <h3>${escapeHtml(match.company_name)}</h3>
+          <p>${escapeHtml(match.industry_group || "n/a")} · ${escapeHtml(match.primary_sector || "n/a")}</p>
+          <div class="metric-grid compact">
+            <div><span>SIC</span><strong>${escapeHtml(match.sic_code || "n/a")}</strong></div>
+            <div><span>Country</span><strong>${escapeHtml(match.country || "n/a")}</strong></div>
+            <div><span>Market cap</span><strong>${format(match.market_cap, "money_usd")}</strong></div>
+            <div><span>EV / EBITDA</span><strong>${format(match.ev_ebitda, "multiple")}</strong></div>
+            <div><span>Price / sales</span><strong>${format(match.ps, "multiple")}</strong></div>
+            <div><span>Net margin</span><strong>${format(match.net_margin, "percent")}</strong></div>
+          </div>
+        </div>
+      </article>
+    `).join("");
+    renderCompsDistanceChart(result);
+  }
+
+  function renderCompsDistanceChart(result) {
+    const canvas = document.getElementById("comps-distance-chart");
+    if (!canvas || !window.Chart) return;
+    const matches = result.matches || [];
+    if (compsDistanceChart) compsDistanceChart.destroy();
+    compsDistanceChart = new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: matches.map((match) => match.ticker),
+        datasets: [{
+          label: result.distance_column || "Distance",
+          data: matches.map((match) => match.distance),
+          backgroundColor: matches.map((_, index) => colors[index % colors.length] + "cc"),
+          borderColor: matches.map((_, index) => colors[index % colors.length]),
+          borderWidth: 1.4,
+          borderRadius: 6
+        }]
+      },
+      options: commonOptions("number")
+    });
+  }
+
+  function runComparableSearch() {
+    const input = document.getElementById("compsTicker");
+    if (!input) return;
+    const ticker = input.value.trim().toUpperCase();
+    const compareBy = selectedCompareBy();
+    if (!ticker) {
+      setCompsStatus("Enter a ticker first.", "error");
+      return;
+    }
+    input.value = ticker;
+    setCompsStatus("Running comps.ipynb distance pipeline...", "loading");
+    fetch(`/api/comparables?ticker=${encodeURIComponent(ticker)}&compare_by=${encodeURIComponent(compareBy)}`)
+      .then((response) => response.json().then((body) => ({ ok: response.ok, body })))
+      .then(({ ok, body }) => {
+        if (!ok || body.error) throw new Error(body.error || "Comparable-company search failed.");
+        renderTargetCard(body);
+        renderCompsResults(body);
+        setCompsStatus(
+          `${body.matches.length} matches from ${body.universe_count.toLocaleString()} filtered firms using ${body.feature_count.toLocaleString()} scaled numeric features.`,
+          "ok"
+        );
+      })
+      .catch((error) => {
+        setCompsStatus(error.message, "error");
+      });
+  }
+
+  function initComparables() {
+    if (page !== "comparables") return;
+    const form = document.getElementById("compsForm");
+    if (!form) return;
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      runComparableSearch();
+    });
+    document.querySelectorAll('input[name="compare_by"]').forEach((radio) => {
+      radio.addEventListener("change", runComparableSearch);
+    });
+    runComparableSearch();
+  }
+
   function initValuation() {
     if (page !== "valuation" || !data.models) return;
     const select = document.getElementById("valuationCompany");
@@ -356,5 +509,6 @@
   document.addEventListener("DOMContentLoaded", function () {
     renderAllCharts();
     initValuation();
+    initComparables();
   });
 })();

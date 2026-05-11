@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="story-grid">
+  <article class="chart-card span-7 comps-console">
+    <div class="section-heading tight">
+      <p class="eyebrow">Comparable-company search</p>
+      <h2>Top 4 closest firms by distance</h2>
+    </div>
+
+    <form id="compsForm" class="comps-form">
+      <div class="ticker-input-wrap">
+        <label for="compsTicker">Target ticker</label>
+        <input id="compsTicker" name="ticker" type="text" value="{{ payload.default_ticker }}" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="match-mode-wrap">
+        <span>Compare by</span>
+        <div class="mode-segments" role="radiogroup" aria-label="Comparable company filter">
+          {% for option in payload.options %}
+            <label class="mode-segment">
+              <input type="radio" name="compare_by" value="{{ option.value }}" {% if option.value == payload.default_compare_by %}checked{% endif %}>
+              <strong>{{ option.label }}</strong>
+              <small>{{ option.description }}</small>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+      <button class="primary-action" type="submit">Run distance search</button>
+    </form>
+
+    <div id="compsStatus" class="comps-status"></div>
+  </article>
+
+  <article class="insight-stack span-5">
+    <div class="insight-box">
+      <span class="thin-divider"></span>
+      <h3>Pipeline logic</h3>
+      <div class="pipeline-list">
+        {% for step in payload.pipeline_steps %}
+          <p>{{ step }}</p>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="target-card" id="compsTargetCard"></div>
+  </article>
+</section>
+
+<section class="comps-results-section">
+  <div class="section-heading tight">
+    <p class="eyebrow">Output</p>
+    <h2>Closest comparable firms</h2>
+  </div>
+  <div id="compsResults" class="comps-result-grid"></div>
+</section>
+
+<section class="chart-card">
+  <div class="section-heading tight">
+    <p class="eyebrow">Distance ranking</p>
+    <h2>Relative distance to target</h2>
+  </div>
+  <div class="chart-frame short"><canvas id="comps-distance-chart"></canvas></div>
+</section>
+{% endblock %}

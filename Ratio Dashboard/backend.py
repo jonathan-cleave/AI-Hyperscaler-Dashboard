@@ -61,13 +61,13 @@ MULTIPLE_METRICS = {
 }
 
 NAV_ITEMS = [
+    {"key": "comparables", "label": "Comps Finder", "href": "/comparables"},
     {"key": "home", "label": "Executive Story", "href": "/"},
     {"key": "profitability", "label": "Profitability", "href": "/profitability"},
     {"key": "capital", "label": "Capital Intensity", "href": "/capital-intensity"},
     {"key": "leverage", "label": "Liquidity + Leverage", "href": "/leverage"},
     {"key": "cash_flow", "label": "Cash Flow", "href": "/cash-flow"},
     {"key": "valuation", "label": "Valuation", "href": "/valuation"},
-    {"key": "comparables", "label": "Comps Finder", "href": "/comparables"},
     {"key": "insights", "label": "Final Insights", "href": "/insights"},
 ]
 
@@ -742,8 +742,105 @@ def parse_msft_valuation(path: Path, errors: list[str]) -> dict[str, Any]:
     }
 
 
+def overlay_statement_column(
+    target: pd.DataFrame,
+    source: pd.DataFrame,
+    source_col: str,
+    target_col: str,
+    transform: Any | None = None,
+) -> pd.DataFrame:
+    if source.empty or source_col not in source.columns or not {"Ticker", "Year"}.issubset(source.columns):
+        return target
+
+    source_values = source[["Ticker", "Year", source_col]].copy()
+    source_values["Ticker"] = source_values["Ticker"].astype(str).str.strip().str.upper()
+    source_values[source_col] = pd.to_numeric(source_values[source_col], errors="coerce")
+    if transform is not None:
+        source_values[source_col] = source_values[source_col].map(lambda value: transform(value) if safe_float(value) is not None else np.nan)
+
+    keyed = (
+        source_values.dropna(subset=["Ticker", "Year"])
+        .groupby(["Ticker", "Year"], as_index=True)[source_col]
+        .last()
+    )
+    if keyed.empty:
+        return target
+
+    keys = pd.MultiIndex.from_frame(target[["Ticker", "Year"]])
+    mapped = pd.Series(keys.map(keyed), index=target.index)
+    if target_col not in target.columns:
+        target[target_col] = np.nan
+    target[target_col] = pd.to_numeric(target[target_col], errors="coerce").combine_first(mapped)
+    return target
+
+
+def series_divide(numerator: pd.Series, denominator: pd.Series) -> pd.Series:
+    numerator = pd.to_numeric(numerator, errors="coerce")
+    denominator = pd.to_numeric(denominator, errors="coerce").replace(0, np.nan)
+    return numerator / denominator
+
+
+def recalculate_dashboard_ratios(df: pd.DataFrame) -> pd.DataFrame:
+    if "Revenue" in df.columns:
+        df["Revenue Growth"] = df.groupby("Ticker")["Revenue"].pct_change()
+
+    if {"Gross profit", "Revenue"}.issubset(df.columns):
+        df["Gross Margin"] = series_divide(df["Gross profit"], df["Revenue"])
+
+    if {"EBITDA", "Revenue"}.issubset(df.columns):
+        df["EBITDA Margin"] = series_divide(df["EBITDA"], df["Revenue"])
+
+    if {"EBIT", "Revenue"}.issubset(df.columns):
+        df["Operating Margin"] = series_divide(df["EBIT"], df["Revenue"])
+
+    if {"Net Income", "Revenue"}.issubset(df.columns):
+        df["Net Profit Margin"] = series_divide(df["Net Income"], df["Revenue"])
+
+    if {"Net Income", "Total Assets"}.issubset(df.columns):
+        df["ROA"] = series_divide(df["Net Income"], df["Total Assets"])
+
+    if {"Net Income", "Equity"}.issubset(df.columns):
+        df["ROE"] = series_divide(df["Net Income"], df["Equity"])
+
+    if {"Current Assets", "Current Liabilities"}.issubset(df.columns):
+        df["Current Ratio"] = series_divide(df["Current Assets"], df["Current Liabilities"])
+
+    if {"Total Debt", "Equity"}.issubset(df.columns):
+        df["Debt / Equity"] = series_divide(df["Total Debt"], df["Equity"])
+
+    if {"Total Debt", "Cash + Investments"}.issubset(df.columns):
+        df["Net Debt"] = pd.to_numeric(df["Total Debt"], errors="coerce") - pd.to_numeric(df["Cash + Investments"], errors="coerce")
+
+    if {"EBIT", "Interest Expense"}.issubset(df.columns):
+        interest = pd.to_numeric(df["Interest Expense"], errors="coerce").abs().replace(0, np.nan)
+        df["Interest Coverage"] = pd.to_numeric(df["EBIT"], errors="coerce") / interest
+
+    if {"CAPEX", "Revenue"}.issubset(df.columns):
+        df["CapEx / Revenue"] = series_divide(df["CAPEX"], df["Revenue"])
+
+    if {"PPE Gross", "Total Assets"}.issubset(df.columns):
+        df["PPE / Assets"] = series_divide(df["PPE Gross"], df["Total Assets"])
+
+    if {"Operating Cash Flow", "Revenue"}.issubset(df.columns):
+        df["Op Cash / Revenue"] = series_divide(df["Operating Cash Flow"], df["Revenue"])
+
+    if {"Operating Cash Flow", "CAPEX", "Revenue"}.issubset(df.columns):
+        df["FCF Margin"] = series_divide(
+            pd.to_numeric(df["Operating Cash Flow"], errors="coerce") - pd.to_numeric(df["CAPEX"], errors="coerce"),
+            df["Revenue"],
+        )
+
+    if "Total Assets" in df.columns:
+        df["Asset Growth"] = df.groupby("Ticker")["Total Assets"].pct_change()
+    else:
+        df["Asset Growth"] = np.nan
+
+    return df
+
+
 def add_derived_ratios(
     ratios: pd.DataFrame,
+    income_statement: pd.DataFrame,
     balance: pd.DataFrame,
     cash_flow: pd.DataFrame,
     comps: dict[str, dict[str, Any]],
@@ -757,16 +854,53 @@ def add_derived_ratios(
         raise DashboardDataError("Ratios sheet must include Ticker and FY/year data.")
 
     df = df.sort_values(["Ticker Order", "Year"])
-    if "Total Assets" in df.columns:
-        df["Asset Growth"] = df.groupby("Ticker")["Total Assets"].pct_change()
-    else:
-        df["Asset Growth"] = np.nan
+    workbook_ratio_cols = [
+        "Revenue Growth",
+        "Gross Margin",
+        "EBITDA Margin",
+        "Operating Margin",
+        "Net Profit Margin",
+        "ROA",
+        "ROE",
+        "Current Ratio",
+        "Debt / Equity",
+        "Interest Coverage",
+        "CapEx / Revenue",
+        "PPE / Assets",
+        "Op Cash / Revenue",
+        "FCF Margin",
+        "Asset Growth",
+    ]
+    workbook_ratio_values = {
+        col: pd.to_numeric(df[col], errors="coerce").copy()
+        for col in workbook_ratio_cols
+        if col in df.columns
+    }
 
-    if "Op Cash / Revenue" not in df.columns and {"Cash from Operating Activities", "Revenue"}.issubset(df.columns):
-        df["Op Cash / Revenue"] = df["Cash from Operating Activities"] / df["Revenue"]
+    statement_overlays = [
+        (income_statement, "Total Revenue", "Revenue", None),
+        (income_statement, "Gross Profit", "Gross profit", None),
+        (income_statement, "Operating Income", "EBIT", None),
+        (income_statement, "Net Income", "Net Income", None),
+        (balance, "Cash, Cash Equiv. & Short Term Inv.", "Cash + Investments", None),
+        (balance, "Total Current Assets", "Current Assets", None),
+        (balance, "Total Assets", "Total Assets", None),
+        (balance, "Total Current Liabilities", "Current Liabilities", None),
+        (balance, "Total Equity", "Equity", None),
+        (balance, "PP&E Gross", "PPE Gross", None),
+        (balance, "Total Common Shares Outstanding", "Shares Outstanding", None),
+        (cash_flow, "Cash from Operating Activities", "Operating Cash Flow", None),
+        (cash_flow, "Capital Expenditures", "CAPEX", lambda value: abs(float(value))),
+    ]
+    for source, source_col, target_col, transform in statement_overlays:
+        df = overlay_statement_column(df, source, source_col, target_col, transform)
 
-    if "FCF Margin" not in df.columns and {"Op Cash / Revenue", "CapEx / Revenue"}.issubset(df.columns):
-        df["FCF Margin"] = df["Op Cash / Revenue"] - df["CapEx / Revenue"]
+    df = recalculate_dashboard_ratios(df)
+    for col, workbook_values in workbook_ratio_values.items():
+        # Preserve the Ratios sheet exactly for charted ratio fields. If a workbook
+        # cell is blank, the dashboard should show a blank/gap instead of filling it
+        # with a backend recalculation.
+        df[col] = workbook_values
 
     shares_lookup = latest_share_lookup(balance)
     for ticker in df["Ticker"].dropna().unique():
@@ -1347,16 +1481,27 @@ def build_pages(
     return pages
 
 
-@lru_cache(maxsize=1)
-def load_dashboard_data() -> dict[str, Any]:
-    errors: list[str] = []
+def dashboard_workbook_signature() -> tuple[str, int, int]:
     workbook = find_workbook()
+    stat = workbook.stat()
+    return str(workbook), int(stat.st_mtime_ns), int(stat.st_size)
+
+
+def load_dashboard_data() -> dict[str, Any]:
+    return _load_dashboard_data_cached(*dashboard_workbook_signature())
+
+
+@lru_cache(maxsize=4)
+def _load_dashboard_data_cached(workbook_path: str, workbook_mtime_ns: int, workbook_size: int) -> dict[str, Any]:
+    errors: list[str] = []
+    workbook = Path(workbook_path)
     ratios_raw = read_standard_sheet(workbook, "Ratios")
+    income_statement = read_standard_sheet(workbook, "Income Statement", required=False)
     balance = read_standard_sheet(workbook, "Balance Sheet")
     cash_flow = read_standard_sheet(workbook, "Cash Flow")
     comps = parse_comps(workbook, errors)
     msft_valuation = parse_msft_valuation(workbook, errors)
-    ratios = add_derived_ratios(ratios_raw, balance, cash_flow, comps)
+    ratios = add_derived_ratios(ratios_raw, income_statement, balance, cash_flow, comps)
 
     pages = build_pages(ratios, balance, cash_flow, comps, msft_valuation)
     data = {
@@ -1375,6 +1520,9 @@ def load_dashboard_data() -> dict[str, Any]:
         "ratios_records": ratios.replace({np.nan: None}).to_dict("records"),
     }
     return sanitize(data)
+
+
+load_dashboard_data.cache_clear = _load_dashboard_data_cached.cache_clear  # type: ignore[attr-defined]
 
 
 def render_dashboard(page_key: str, template_name: str):
@@ -1396,6 +1544,16 @@ def render_dashboard(page_key: str, template_name: str):
 
 
 app = Flask(__name__)
+
+
+@app.after_request
+def prevent_dynamic_response_cache(response):
+    content_type = response.headers.get("Content-Type", "")
+    if "text/html" in content_type or "application/json" in content_type:
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 
 @app.template_filter("pct")

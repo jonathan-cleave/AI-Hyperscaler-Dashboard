@@ -31,17 +31,13 @@
     <div id="compsStatus" class="comps-status"></div>
   </article>
 
-  <article class="insight-stack span-5">
-    <div class="insight-box">
+  <article class="ranking-card span-5 comps-name-ranking">
+    <div class="section-heading tight">
       <span class="thin-divider"></span>
-      <h3>Pipeline logic</h3>
-      <div class="pipeline-list">
-        {% for step in payload.pipeline_steps %}
-          <p>{{ step }}</p>
-        {% endfor %}
-      </div>
+      <p class="eyebrow">Firm Ranking</p>
+      <h2>Target and closest firms</h2>
     </div>
-    <div class="target-card" id="compsTargetCard"></div>
+    <div id="compsNameRanking" class="name-ranking-list"></div>
   </article>
 </section>
 

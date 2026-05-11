@@ -889,6 +889,61 @@ select {
   border-left: 1px solid rgba(255, 122, 24, 0.42);
 }
 
+.comps-name-ranking {
+  align-self: stretch;
+}
+
+.name-ranking-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.name-rank-row {
+  display: grid;
+  grid-template-columns: 94px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 60px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.name-rank-row.target {
+  border-color: rgba(255, 122, 24, 0.46);
+  background: linear-gradient(180deg, rgba(255, 122, 24, 0.17), rgba(255, 255, 255, 0.04));
+  box-shadow: var(--glow);
+}
+
+.name-rank-row span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 122, 24, 0.64);
+  border-radius: 6px;
+  color: var(--orange-2);
+  font-size: 1rem;
+  font-weight: 900;
+  white-space: nowrap;
+  background: linear-gradient(180deg, rgba(255, 177, 94, 0.24), rgba(255, 122, 24, 0.12));
+  box-shadow: 0 0 18px rgba(255, 122, 24, 0.24);
+}
+
+.name-rank-row:not(.target) span {
+  color: #17100b;
+  background: linear-gradient(180deg, var(--orange-2), var(--orange));
+  box-shadow: 0 0 22px rgba(255, 122, 24, 0.42);
+}
+
+.name-rank-row strong {
+  line-height: 1.25;
+}
+
 .target-card {
   padding: 16px;
   border: 1px solid rgba(255, 122, 24, 0.2);

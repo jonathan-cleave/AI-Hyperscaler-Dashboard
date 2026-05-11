@@ -2,6 +2,7 @@
   const data = window.dashboardData || {};
   const page = document.body.dataset.page;
   const colors = ["#ff7a18", "#ffb15e", "#5ee7ff", "#f4efe8", "#7de38d", "#ff6b6b"];
+  const MSFT_COLOR = "#7FBA00";
 
   function isNumber(value) {
     return typeof value === "number" && Number.isFinite(value);
@@ -35,6 +36,18 @@
     if (type === "price") return `$${value.toFixed(2)}`;
     if (type === "rank") return `${value.toFixed(0)}`;
     return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+  }
+
+  function normalizedTicker(label) {
+    return String(label || "").trim().toUpperCase().split(":").pop();
+  }
+
+  function colorForLabel(label, fallbackColor) {
+    return normalizedTicker(label) === "MSFT" ? MSFT_COLOR : fallbackColor;
+  }
+
+  function translucentColorForLabel(label, fallbackColor, alphaHex) {
+    return `${colorForLabel(label, fallbackColor)}${alphaHex}`;
   }
 
   function fallback(canvas, message) {
@@ -98,17 +111,20 @@
       type: "line",
       data: {
         labels: chart.labels || [],
-        datasets: (chart.series || []).map((series, index) => ({
-          label: series.display_ticker,
-          data: series.values,
-          borderColor: colors[index % colors.length],
-          backgroundColor: colors[index % colors.length],
-          pointRadius: 2.8,
-          pointHoverRadius: 5,
-          tension: 0.32,
-          borderWidth: 2.4,
-          spanGaps: true
-        }))
+        datasets: (chart.series || []).map((series, index) => {
+          const seriesColor = colorForLabel(series.display_ticker || series.ticker, colors[index % colors.length]);
+          return {
+            label: series.display_ticker,
+            data: series.values,
+            borderColor: seriesColor,
+            backgroundColor: seriesColor,
+            pointRadius: 2.8,
+            pointHoverRadius: 5,
+            tension: 0.32,
+            borderWidth: 2.4,
+            spanGaps: true
+          };
+        })
       },
       options: commonOptions(chart.format)
     });
@@ -125,8 +141,8 @@
         datasets: [{
           label: chart.metric || chart.title,
           data: chart.values || [],
-          backgroundColor: (chart.values || []).map((_, index) => colors[index % colors.length] + "cc"),
-          borderColor: (chart.values || []).map((_, index) => colors[index % colors.length]),
+          backgroundColor: (chart.values || []).map((_, index) => translucentColorForLabel((chart.labels || [])[index], colors[index % colors.length], "cc")),
+          borderColor: (chart.values || []).map((_, index) => colorForLabel((chart.labels || [])[index], colors[index % colors.length])),
           borderWidth: 1.4,
           borderRadius: 6
         }]
@@ -146,8 +162,8 @@
         datasets: (chart.datasets || []).map((dataset, index) => ({
           label: dataset.label,
           data: dataset.values,
-          backgroundColor: colors[index % colors.length] + "c7",
-          borderColor: colors[index % colors.length],
+          backgroundColor: (dataset.values || []).map((_, labelIndex) => translucentColorForLabel((chart.labels || [])[labelIndex], colors[index % colors.length], "c7")),
+          borderColor: (dataset.values || []).map((_, labelIndex) => colorForLabel((chart.labels || [])[labelIndex], colors[index % colors.length])),
           borderWidth: 1.2,
           borderRadius: 5
         }))
@@ -373,25 +389,22 @@
     status.classList.toggle("loading", type === "loading");
   }
 
-  function renderTargetCard(result) {
-    const targetCard = document.getElementById("compsTargetCard");
-    if (!targetCard) return;
+  function renderCompsNameRanking(result) {
+    const ranking = document.getElementById("compsNameRanking");
+    if (!ranking) return;
     const target = result.target || {};
-    targetCard.innerHTML = `
-      <span class="thin-divider"></span>
-      <p class="eyebrow">Target company</p>
-      <h3>${escapeHtml(target.company_name || result.ticker)}</h3>
-      <div class="target-meta">
-        <span>${escapeHtml(target.ticker || result.ticker)}</span>
-        <span>SIC ${escapeHtml(target.sic_code || "n/a")}</span>
-        <span>${escapeHtml(target.primary_sector || "n/a")}</span>
+    const matches = result.matches || [];
+    ranking.innerHTML = `
+      <div class="name-rank-row target">
+        <span>Target</span>
+        <strong>${escapeHtml(target.company_name || result.ticker)}</strong>
       </div>
-      <div class="metric-grid compact">
-        <div><span>Industry</span><strong>${escapeHtml(target.industry_group || "n/a")}</strong></div>
-        <div><span>Country</span><strong>${escapeHtml(target.country || "n/a")}</strong></div>
-        <div><span>Market cap</span><strong>${format(target.market_cap, "money_usd")}</strong></div>
-        <div><span>EV / EBITDA</span><strong>${format(target.ev_ebitda, "multiple")}</strong></div>
-      </div>
+      ${matches.map((match, index) => `
+        <div class="name-rank-row">
+          <span>${index + 1}</span>
+          <strong>${escapeHtml(match.company_name)}</strong>
+        </div>
+      `).join("")}
     `;
   }
 
@@ -413,7 +426,7 @@
             <small>Distance ${format(match.distance, "number")}</small>
           </div>
           <h3>${escapeHtml(match.company_name)}</h3>
-          <p>${escapeHtml(match.industry_group || "n/a")} · ${escapeHtml(match.primary_sector || "n/a")}</p>
+          <p>${escapeHtml(match.industry_group || "n/a")} - ${escapeHtml(match.primary_sector || "n/a")}</p>
           <div class="metric-grid compact">
             <div><span>SIC</span><strong>${escapeHtml(match.sic_code || "n/a")}</strong></div>
             <div><span>Country</span><strong>${escapeHtml(match.country || "n/a")}</strong></div>
@@ -440,8 +453,8 @@
         datasets: [{
           label: result.distance_column || "Distance",
           data: matches.map((match) => match.distance),
-          backgroundColor: matches.map((_, index) => colors[index % colors.length] + "cc"),
-          borderColor: matches.map((_, index) => colors[index % colors.length]),
+          backgroundColor: matches.map((match, index) => translucentColorForLabel(match.ticker, colors[index % colors.length], "cc")),
+          borderColor: matches.map((match, index) => colorForLabel(match.ticker, colors[index % colors.length])),
           borderWidth: 1.4,
           borderRadius: 6
         }]
@@ -460,15 +473,15 @@
       return;
     }
     input.value = ticker;
-    setCompsStatus("Running comps.ipynb distance pipeline...", "loading");
+    setCompsStatus("Running distance search...", "loading");
     fetch(`/api/comparables?ticker=${encodeURIComponent(ticker)}&compare_by=${encodeURIComponent(compareBy)}`)
       .then((response) => response.json().then((body) => ({ ok: response.ok, body })))
       .then(({ ok, body }) => {
         if (!ok || body.error) throw new Error(body.error || "Comparable-company search failed.");
-        renderTargetCard(body);
+        renderCompsNameRanking(body);
         renderCompsResults(body);
         setCompsStatus(
-          `${body.matches.length} matches from ${body.universe_count.toLocaleString()} filtered firms using ${body.feature_count.toLocaleString()} scaled numeric features.`,
+          `${body.matches.length} closest matches found from ${body.universe_count.toLocaleString()} filtered firms.`,
           "ok"
         );
       })

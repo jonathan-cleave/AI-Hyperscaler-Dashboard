@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="server-card-grid">
+  {% for card in payload.server_cards %}
+    <article class="server-card">
+      <div class="server-visual">
+        <span style="height: {{ card.fill }}%"></span>
+        <i></i><i></i><i></i><i></i>
+      </div>
+      <div>
+        <strong>{{ card.display_ticker }}</strong>
+        <p>{{ card.company }}</p>
+      </div>
+      <div class="metric-grid compact">
+        <div><span>Capex / revenue</span><strong>{{ card.capex_revenue | pct }}</strong></div>
+        <div><span>PPE / assets</span><strong>{{ card.ppe_assets | pct }}</strong></div>
+      </div>
+    </article>
+  {% endfor %}
+</section>
+
+<section class="chart-grid two">
+  {% for chart in payload.line_charts %}
+    <article class="chart-card">
+      <div class="section-heading tight">
+        <p class="eyebrow">Infrastructure trend</p>
+        <h2>{{ chart.title }}</h2>
+      </div>
+      <div class="chart-frame"><canvas id="{{ chart.id }}"></canvas></div>
+    </article>
+  {% endfor %}
+</section>
+
+<section class="story-grid">
+  <article class="chart-card span-7">
+    <div class="section-heading tight">
+      <p class="eyebrow">Aggressive spend signal</p>
+      <h2>{{ payload.bar_charts[0].title }}</h2>
+    </div>
+    <div class="chart-frame"><canvas id="{{ payload.bar_charts[0].id }}"></canvas></div>
+  </article>
+  <article class="insight-stack span-5">
+    {% for note in payload.commentary %}
+      <div class="insight-box">
+        <span class="thin-divider"></span>
+        <h3>{{ note.title }}</h3>
+        <p>{{ note.body }}</p>
+      </div>
+    {% endfor %}
+  </article>
+</section>
+{% endblock %}

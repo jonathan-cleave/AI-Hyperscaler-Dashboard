@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ meta.title }} | AI Infrastructure Finance</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body data-page="{{ page_key }}">
+  <div class="page-shell">
+    <aside class="side-nav">
+      <a class="brand-mark" href="{{ url_for('index') }}">
+        <span class="brand-icon"><span></span><span></span><span></span></span>
+        <span>
+          <strong>AI Infra</strong>
+          <small>Hyperscaler finance</small>
+        </span>
+      </a>
+      <nav>
+        {% for item in nav_items %}
+          <a class="nav-link {% if item.key == page_key %}active{% endif %}" href="{{ item.href }}">
+            <span class="nav-dot"></span>{{ item.label }}
+          </a>
+        {% endfor %}
+      </nav>
+      <div class="nav-footer">
+        <span>Workbook sourced</span>
+        <strong>All Ratios.xlsx</strong>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section class="page-hero">
+        <div>
+          <p class="eyebrow">{{ meta.eyebrow }}</p>
+          <h1>{{ meta.title }}</h1>
+          <p class="subtitle">{{ meta.subtitle }}</p>
+        </div>
+        <div class="hero-rack" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </section>
+
+      {% if errors %}
+        <section class="alert-strip">
+          {% for error in errors %}
+            <p>{{ error }}</p>
+          {% endfor %}
+        </section>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <script>
+    window.dashboardData = {{ payload | tojson }};
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

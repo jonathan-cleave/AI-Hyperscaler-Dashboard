@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="story-grid">
+  <article class="chart-card span-7 valuation-console">
+    <div class="section-heading tight">
+      <p class="eyebrow">Interactive model</p>
+      <h2>EV/EBITDA implied share price</h2>
+    </div>
+    <div class="model-toolbar">
+      <label for="valuationCompany">Company</label>
+      <select id="valuationCompany">
+        {% for ticker, model in payload.models.items() %}
+          <option value="{{ ticker }}" {% if ticker == payload.initial_company %}selected{% endif %}>{{ model.display_ticker }} - {{ model.company }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="model-grid">
+      <div class="input-card" data-control="revenue_growth" data-scale="100">
+        <label>Revenue growth assumption</label>
+        <input id="revenueGrowthSlider" type="range">
+        <input id="revenueGrowthInput" type="number">
+      </div>
+      <div class="input-card" data-control="ebitda_margin" data-scale="100">
+        <label>EBITDA margin assumption</label>
+        <input id="ebitdaMarginSlider" type="range">
+        <input id="ebitdaMarginInput" type="number">
+      </div>
+      <div class="input-card" data-control="exit_multiple" data-scale="1">
+        <label>Exit EV/EBITDA multiple</label>
+        <input id="exitMultipleSlider" type="range">
+        <input id="exitMultipleInput" type="number">
+      </div>
+      <div class="input-card" data-control="net_debt" data-scale="1">
+        <label>Net debt adjustment</label>
+        <input id="netDebtSlider" type="range">
+        <input id="netDebtInput" type="number">
+      </div>
+      <div class="input-card" data-control="shares" data-scale="1">
+        <label>Shares outstanding</label>
+        <input id="sharesSlider" type="range">
+        <input id="sharesInput" type="number">
+      </div>
+    </div>
+
+    <div class="valuation-output-grid">
+      <div><span>Forecast revenue</span><strong id="forecastRevenue"></strong></div>
+      <div><span>Forecast EBITDA</span><strong id="forecastEbitda"></strong></div>
+      <div><span>Enterprise value</span><strong id="enterpriseValue"></strong></div>
+      <div><span>Equity value</span><strong id="equityValue"></strong></div>
+      <div class="final-price"><span>Implied share price</span><strong id="impliedPrice"></strong></div>
+      <div><span>Upside / downside</span><strong id="upsideDownside"></strong></div>
+    </div>
+  </article>
+
+  <article class="insight-stack span-5">
+    {% for item in payload.commentary %}
+      <div class="insight-box">
+        <span class="thin-divider"></span>
+        <p>{{ item }}</p>
+      </div>
+    {% endfor %}
+    <div class="assumption-panel">
+      <p class="eyebrow">Comps assumptions</p>
+      <div id="assumptionCards" class="assumption-grid"></div>
+    </div>
+  </article>
+</section>
+
+<section class="chart-grid three">
+  {% for chart in payload.multiple_charts %}
+    <article class="chart-card">
+      <div class="section-heading tight">
+        <p class="eyebrow">Valuation multiple</p>
+        <h2>{{ chart.title }}</h2>
+      </div>
+      <div class="chart-frame short"><canvas id="{{ chart.id }}"></canvas></div>
+    </article>
+  {% endfor %}
+</section>
+
+<section class="story-grid">
+  <article class="chart-card span-7">
+    <div class="section-heading tight">
+      <p class="eyebrow">MSFT Valuation worksheet</p>
+      <h2>DCF cash flow and present value</h2>
+    </div>
+    <div class="chart-frame tall"><canvas id="msft-dcf-chart"></canvas></div>
+  </article>
+  <article class="workbook-card span-5">
+    <div class="section-heading tight">
+      <p class="eyebrow">Workbook output</p>
+      <h2>MSFT implied value bridge</h2>
+    </div>
+    <div class="metric-grid">
+      {% for label, value in payload.msft_valuation.outputs.items() %}
+        <div>
+          <span>{{ label }}</span>
+          <strong>{% if label == "Price" %}{{ value | price }}{% elif label == "Shares" %}{{ value | number }}{% else %}{{ value | money_m }}{% endif %}</strong>
+        </div>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+{% endblock %}

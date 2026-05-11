@@ -1,0 +1,360 @@
+(function () {
+  const data = window.dashboardData || {};
+  const page = document.body.dataset.page;
+  const colors = ["#ff7a18", "#ffb15e", "#5ee7ff", "#f4efe8", "#7de38d", "#ff6b6b"];
+
+  function isNumber(value) {
+    return typeof value === "number" && Number.isFinite(value);
+  }
+
+  function moneyMillions(value) {
+    if (!isNumber(value)) return "n/a";
+    const sign = value < 0 ? "-" : "";
+    const abs = Math.abs(value);
+    if (abs >= 1000000) return `${sign}$${(abs / 1000000).toFixed(2)}T`;
+    if (abs >= 1000) return `${sign}$${(abs / 1000).toFixed(1)}B`;
+    return `${sign}$${abs.toFixed(0)}M`;
+  }
+
+  function format(value, type) {
+    if (!isNumber(value)) return "n/a";
+    if (type === "percent") return `${(value * 100).toFixed(1)}%`;
+    if (type === "multiple") return `${value.toFixed(1)}x`;
+    if (type === "money_m") return moneyMillions(value);
+    if (type === "price") return `$${value.toFixed(2)}`;
+    if (type === "rank") return `${value.toFixed(0)}`;
+    return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+  }
+
+  function fallback(canvas, message) {
+    if (!canvas || !canvas.parentElement) return;
+    const div = document.createElement("div");
+    div.className = "chart-fallback";
+    div.textContent = message || "Chart library unavailable.";
+    canvas.replaceWith(div);
+  }
+
+  function commonOptions(formatType) {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          labels: {
+            color: "#d9d1c9",
+            boxWidth: 10,
+            boxHeight: 10,
+            usePointStyle: true
+          }
+        },
+        tooltip: {
+          backgroundColor: "rgba(8, 8, 9, 0.94)",
+          borderColor: "rgba(255, 122, 24, 0.45)",
+          borderWidth: 1,
+          titleColor: "#fff4e7",
+          bodyColor: "#e4ddd6",
+          callbacks: {
+            label: function (context) {
+              return `${context.dataset.label}: ${format(context.parsed.y, formatType)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: "#a7a19a", maxRotation: 0 },
+          grid: { color: "rgba(255,255,255,0.055)" }
+        },
+        y: {
+          ticks: {
+            color: "#a7a19a",
+            callback: function (value) {
+              return format(Number(value), formatType);
+            }
+          },
+          grid: { color: "rgba(255,255,255,0.07)" }
+        }
+      }
+    };
+  }
+
+  function renderLineChart(chart) {
+    const canvas = document.getElementById(chart.id);
+    if (!canvas) return;
+    if (!window.Chart) return fallback(canvas);
+    new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: chart.labels || [],
+        datasets: (chart.series || []).map((series, index) => ({
+          label: series.display_ticker,
+          data: series.values,
+          borderColor: colors[index % colors.length],
+          backgroundColor: colors[index % colors.length],
+          pointRadius: 2.8,
+          pointHoverRadius: 5,
+          tension: 0.32,
+          borderWidth: 2.4,
+          spanGaps: true
+        }))
+      },
+      options: commonOptions(chart.format)
+    });
+  }
+
+  function renderBarChart(chart) {
+    const canvas = document.getElementById(chart.id);
+    if (!canvas) return;
+    if (!window.Chart) return fallback(canvas);
+    new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: chart.labels || [],
+        datasets: [{
+          label: chart.metric || chart.title,
+          data: chart.values || [],
+          backgroundColor: (chart.values || []).map((_, index) => colors[index % colors.length] + "cc"),
+          borderColor: (chart.values || []).map((_, index) => colors[index % colors.length]),
+          borderWidth: 1.4,
+          borderRadius: 6
+        }]
+      },
+      options: commonOptions(chart.format)
+    });
+  }
+
+  function renderGroupedBar(chart) {
+    const canvas = document.getElementById(chart.id);
+    if (!canvas) return;
+    if (!window.Chart) return fallback(canvas);
+    new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: chart.labels || [],
+        datasets: (chart.datasets || []).map((dataset, index) => ({
+          label: dataset.label,
+          data: dataset.values,
+          backgroundColor: colors[index % colors.length] + "c7",
+          borderColor: colors[index % colors.length],
+          borderWidth: 1.2,
+          borderRadius: 5
+        }))
+      },
+      options: commonOptions(chart.format)
+    });
+  }
+
+  function renderAllCharts() {
+    (data.charts || []).forEach(renderLineChart);
+    (data.line_charts || []).forEach(renderLineChart);
+    (data.bar_charts || []).forEach(renderBarChart);
+    (data.multiple_charts || []).forEach(renderBarChart);
+    if (data.bridge_chart) renderGroupedBar(data.bridge_chart);
+    if (data.rank_chart) renderGroupedBar(data.rank_chart);
+    renderMsftDcf();
+  }
+
+  function renderMsftDcf() {
+    const canvas = document.getElementById("msft-dcf-chart");
+    if (!canvas || !data.msft_valuation || !data.msft_valuation.dcf) return;
+    const dcf = data.msft_valuation.dcf;
+    if (!window.Chart) return fallback(canvas);
+    const rows = {};
+    (dcf.rows || []).forEach((row) => { rows[row.label] = row.values; });
+    new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: dcf.headers || [],
+        datasets: [
+          {
+            label: "FCFF",
+            data: rows.FCFF || [],
+            backgroundColor: "rgba(255,122,24,0.72)",
+            borderColor: "#ff7a18",
+            borderWidth: 1.4,
+            borderRadius: 5
+          },
+          {
+            label: "PV",
+            data: rows.PV || [],
+            backgroundColor: "rgba(94,231,255,0.42)",
+            borderColor: "#5ee7ff",
+            borderWidth: 1.4,
+            borderRadius: 5
+          }
+        ]
+      },
+      options: commonOptions("money_m")
+    });
+  }
+
+  const valuationControls = {
+    revenue_growth: {
+      slider: "revenueGrowthSlider",
+      input: "revenueGrowthInput",
+      scale: 100,
+      outputType: "percent"
+    },
+    ebitda_margin: {
+      slider: "ebitdaMarginSlider",
+      input: "ebitdaMarginInput",
+      scale: 100,
+      outputType: "percent"
+    },
+    exit_multiple: {
+      slider: "exitMultipleSlider",
+      input: "exitMultipleInput",
+      scale: 1,
+      outputType: "multiple"
+    },
+    net_debt: {
+      slider: "netDebtSlider",
+      input: "netDebtInput",
+      scale: 1,
+      outputType: "money_m"
+    },
+    shares: {
+      slider: "sharesSlider",
+      input: "sharesInput",
+      scale: 1,
+      outputType: "number"
+    }
+  };
+
+  let valuationTimer = null;
+
+  function controlValue(name) {
+    const control = valuationControls[name];
+    const input = document.getElementById(control.input);
+    if (!input) return null;
+    const raw = Number(input.value);
+    if (!Number.isFinite(raw)) return null;
+    return raw / control.scale;
+  }
+
+  function setControl(name, value, range) {
+    const control = valuationControls[name];
+    const slider = document.getElementById(control.slider);
+    const input = document.getElementById(control.input);
+    if (!slider || !input) return;
+    const scale = control.scale;
+    const scaledValue = value * scale;
+    const scaledRange = {
+      min: range.min * scale,
+      max: range.max * scale,
+      step: range.step * scale
+    };
+    [slider, input].forEach((element) => {
+      element.min = scaledRange.min;
+      element.max = scaledRange.max;
+      element.step = scaledRange.step;
+      element.value = scaledValue.toFixed(control.outputType === "money_m" ? 0 : 2);
+    });
+  }
+
+  function syncControl(name, source) {
+    const control = valuationControls[name];
+    const slider = document.getElementById(control.slider);
+    const input = document.getElementById(control.input);
+    if (!slider || !input) return;
+    const value = source === "slider" ? slider.value : input.value;
+    slider.value = value;
+    input.value = value;
+    scheduleValuation();
+  }
+
+  function loadCompanyModel(ticker) {
+    const model = data.models && data.models[ticker];
+    if (!model) return;
+    Object.keys(valuationControls).forEach((name) => {
+      setControl(name, model.inputs[name], model.ranges[name]);
+    });
+    updateAssumptions(model);
+    scheduleValuation(0);
+  }
+
+  function updateAssumptions(model) {
+    const container = document.getElementById("assumptionCards");
+    if (!container) return;
+    const assumptions = model.assumptions || {};
+    const items = [
+      ["WACC", assumptions.wacc, "percent"],
+      ["Cost of debt", assumptions.cost_of_debt, "percent"],
+      ["Cost of equity", assumptions.cost_of_equity, "percent"],
+      ["Tax rate", assumptions.tax_rate, "percent"],
+      ["Beta", assumptions.beta, "number"],
+      ["Market equity", assumptions.market_equity, "money_m"]
+    ];
+    container.innerHTML = items.map(([label, value, type]) => (
+      `<div class="assumption-pill"><span>${label}</span><strong>${format(value, type)}</strong></div>`
+    )).join("");
+  }
+
+  function scheduleValuation(delay) {
+    window.clearTimeout(valuationTimer);
+    valuationTimer = window.setTimeout(updateValuation, delay === undefined ? 90 : delay);
+  }
+
+  function updateValuation() {
+    const select = document.getElementById("valuationCompany");
+    if (!select) return;
+    const payload = {
+      ticker: select.value,
+      revenue_growth: controlValue("revenue_growth"),
+      ebitda_margin: controlValue("ebitda_margin"),
+      exit_multiple: controlValue("exit_multiple"),
+      net_debt: controlValue("net_debt"),
+      shares: controlValue("shares")
+    };
+    fetch("/api/valuation/calculate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+      .then((response) => response.json())
+      .then((result) => {
+        if (result.error) throw new Error(result.error);
+        const outputs = result.outputs || {};
+        setText("forecastRevenue", format(outputs.forecast_revenue, "money_m"));
+        setText("forecastEbitda", format(outputs.forecast_ebitda, "money_m"));
+        setText("enterpriseValue", format(outputs.enterprise_value, "money_m"));
+        setText("equityValue", format(outputs.equity_value, "money_m"));
+        setText("impliedPrice", format(outputs.implied_share_price, "price"));
+        const upside = document.getElementById("upsideDownside");
+        if (upside) {
+          upside.textContent = format(outputs.upside_downside, "percent");
+          upside.classList.toggle("positive", isNumber(outputs.upside_downside) && outputs.upside_downside >= 0);
+          upside.classList.toggle("negative", isNumber(outputs.upside_downside) && outputs.upside_downside < 0);
+        }
+      })
+      .catch((error) => {
+        setText("impliedPrice", error.message || "n/a");
+      });
+  }
+
+  function setText(id, text) {
+    const element = document.getElementById(id);
+    if (element) element.textContent = text;
+  }
+
+  function initValuation() {
+    if (page !== "valuation" || !data.models) return;
+    const select = document.getElementById("valuationCompany");
+    if (!select) return;
+    select.addEventListener("change", () => loadCompanyModel(select.value));
+    Object.keys(valuationControls).forEach((name) => {
+      const control = valuationControls[name];
+      const slider = document.getElementById(control.slider);
+      const input = document.getElementById(control.input);
+      if (slider) slider.addEventListener("input", () => syncControl(name, "slider"));
+      if (input) input.addEventListener("input", () => syncControl(name, "input"));
+    });
+    loadCompanyModel(select.value);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    renderAllCharts();
+    initValuation();
+  });
+})();

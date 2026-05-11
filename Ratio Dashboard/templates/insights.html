@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="story-grid">
+  <article class="chart-card span-7">
+    <div class="section-heading tight">
+      <p class="eyebrow">Rank summary</p>
+      <h2>{{ payload.rank_chart.title }}</h2>
+    </div>
+    <div class="chart-frame tall"><canvas id="{{ payload.rank_chart.id }}"></canvas></div>
+  </article>
+  <article class="insight-stack span-5">
+    {% for item in payload.conclusions %}
+      <div class="conclusion-card">
+        <span class="thin-divider"></span>
+        <h3>{{ item.question }}</h3>
+        <p>{{ item.answer }}</p>
+      </div>
+    {% endfor %}
+  </article>
+</section>
+
+<section class="ranking-grid">
+  {% for ranking in payload.rankings %}
+    <article class="ranking-card">
+      <div class="section-heading tight">
+        <p class="eyebrow">{{ ranking.note }}</p>
+        <h2>{{ ranking.title }}</h2>
+      </div>
+      <ol>
+        {% for item in ranking["items"] %}
+          <li>
+            <span>{{ item.rank }}</span>
+            <strong>{{ item.display_ticker }}</strong>
+            <small>{{ item.company }}</small>
+          </li>
+        {% endfor %}
+      </ol>
+    </article>
+  {% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="story-grid">
+  <article class="story-panel span-7">
+    <div class="section-heading">
+      <p class="eyebrow">Executive question</p>
+      <h2>Who wins the AI infrastructure cycle?</h2>
+    </div>
+    <p class="lead-question">Who is capturing the gains, who is carrying the capital burden, and where is financial risk building?</p>
+    <div class="takeaway-list">
+      {% for item in payload.takeaways %}
+        <div class="takeaway">
+          <span class="pulse-node"></span>
+          <p>{{ item }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="story-panel span-5 rack-panel">
+    <div class="section-heading">
+      <p class="eyebrow">AI infrastructure chain</p>
+      <h2>Cloud capital burden</h2>
+    </div>
+    <div class="rack-chain">
+      {% for company in payload.capital_chain %}
+        <div class="rack-unit">
+          <div class="mini-rack">
+            <span style="height: {{ company.fill }}%"></span>
+          </div>
+          <strong>{{ company.display_ticker }}</strong>
+          <small>Capex / revenue {{ company.capex_revenue | pct }}</small>
+        </div>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+
+<section class="company-card-grid">
+  {% for card in payload.cards %}
+    <article class="company-card">
+      <div class="card-topline">
+        <span>{{ card.display_ticker }}</span>
+        <small>{{ card.year }}</small>
+      </div>
+      <h3>{{ card.company }}</h3>
+      <div class="metric-grid compact">
+        <div><span>Revenue</span><strong>{{ card.revenue | money_m }}</strong></div>
+        <div><span>Growth</span><strong>{{ card.revenue_growth | pct }}</strong></div>
+        <div><span>Op margin</span><strong>{{ card.operating_margin | pct }}</strong></div>
+        <div><span>Capex load</span><strong>{{ card.capex_revenue | pct }}</strong></div>
+        <div><span>FCF margin</span><strong>{{ card.fcf_margin | pct }}</strong></div>
+        <div><span>Debt / equity</span><strong>{{ card.debt_equity | multiple }}</strong></div>
+      </div>
+    </article>
+  {% endfor %}
+</section>
+
+<section class="chart-grid two">
+  {% for chart in payload.charts %}
+    <article class="chart-card">
+      <div class="section-heading tight">
+        <p class="eyebrow">{{ chart.metric }}</p>
+        <h2>{{ chart.title }}</h2>
+      </div>
+      <div class="chart-frame"><canvas id="{{ chart.id }}"></canvas></div>
+    </article>
+  {% endfor %}
+</section>
+{% endblock %}

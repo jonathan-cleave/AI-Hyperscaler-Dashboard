@@ -55,12 +55,23 @@
   </article>
 
   <article class="insight-stack span-5">
-    {% for item in payload.commentary %}
-      <div class="insight-box">
-        <span class="thin-divider"></span>
-        <p>{{ item }}</p>
+    <div class="insight-box formula-box">
+      <span class="thin-divider"></span>
+      <p class="eyebrow">Formula</p>
+      <div class="math-formula">
+        \[
+        \text{Implied Share Price} =
+        \frac{
+          \left(\text{Revenue} \times (1 + \text{Revenue Growth})\right)
+          \times \text{EBITDA Margin}
+          \times \text{Exit EV/EBITDA Multiple}
+          - \text{Net Debt}
+        }{
+          \text{Shares Outstanding}
+        }
+        \]
       </div>
-    {% endfor %}
+    </div>
     <div class="assumption-panel">
       <p class="eyebrow">Comps assumptions</p>
       <div id="assumptionCards" class="assumption-grid"></div>

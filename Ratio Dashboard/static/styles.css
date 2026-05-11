@@ -558,6 +558,23 @@ canvas {
   font-size: 1rem;
 }
 
+.formula-box p:last-child,
+.math-formula {
+  color: #fff2e2;
+  font-size: 1.02rem;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.math-formula {
+  overflow-x: auto;
+  padding: 6px 0;
+}
+
+.math-formula svg {
+  max-width: 100%;
+}
+
 .thin-divider {
   display: block;
   width: 84px;

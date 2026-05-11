@@ -1453,10 +1453,7 @@ def build_pages(
         "models": valuation_models,
         "initial_company": "MSFT" if "MSFT" in valuation_models else next(iter(valuation_models), None),
         "msft_valuation": msft_valuation,
-        "commentary": [
-            "The workbook's Comps tab supplies EV/EBITDA and WACC assumptions; the MSFT Valuation tab supplies the detailed DCF worksheet shown below.",
-            "The interactive model is deliberately simple: revenue growth and EBITDA margin set forecast EBITDA, the exit multiple sets enterprise value, and net debt plus shares convert that into an implied price.",
-        ],
+        "formula": "Implied Share Price = (((Revenue x (1 + Revenue Growth)) x EBITDA Margin x Exit EV/EBITDA Multiple) - Net Debt) / Shares Outstanding",
     }
 
     pages["comparables"] = {

@@ -57,6 +57,13 @@
   <script>
     window.dashboardData = {{ payload | tojson }};
   </script>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [["\\(", "\\)"], ["$", "$"]], displayMath: [["\\[", "\\]"]] },
+      svg: { fontCache: "global" }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>

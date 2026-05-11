@@ -210,6 +210,69 @@
     renderMsftDcf();
   }
 
+  function resizeChartsIn(element) {
+    if (!window.Chart || !element) return;
+    element.querySelectorAll("canvas").forEach((canvas) => {
+      const chart = Chart.getChart(canvas);
+      if (chart) window.setTimeout(() => chart.resize(), 80);
+    });
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([element]).catch(() => {});
+    }
+  }
+
+  function explodedTargetElements() {
+    return Array.from(document.querySelectorAll(".chart-card, .formula-box")).filter((element) => (
+      element.querySelector("canvas, .math-formula, .risk-heatmap")
+    ));
+  }
+
+  function closeExplodedView() {
+    const active = document.querySelector(".exploded-active");
+    if (active) {
+      active.classList.remove("exploded-active");
+      resizeChartsIn(active);
+    }
+    document.body.classList.remove("exploded-backdrop-active");
+  }
+
+  function toggleExplodedView(element) {
+    if (!element) return;
+
+    if (document.querySelector(".exploded-active") === element) {
+      closeExplodedView();
+      return;
+    }
+
+    closeExplodedView();
+    element.classList.add("exploded-active");
+    document.body.classList.add("exploded-backdrop-active");
+    resizeChartsIn(element);
+  }
+
+  function initExplodedControls() {
+    explodedTargetElements().forEach((element) => {
+      if (element.querySelector(":scope > .exploded-toggle")) return;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "exploded-toggle";
+      button.setAttribute("aria-label", "Open exploded view");
+      button.title = "Open exploded view";
+      button.addEventListener("click", () => toggleExplodedView(element));
+      element.appendChild(button);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeExplodedView();
+    });
+
+    document.addEventListener("click", (event) => {
+      if (document.body.classList.contains("exploded-backdrop-active") && event.target === document.body) {
+        closeExplodedView();
+      }
+    });
+  }
+
   function renderMsftDcf() {
     const canvas = document.getElementById("msft-dcf-chart");
     if (!canvas || !data.msft_valuation || !data.msft_valuation.dcf) return;
@@ -549,5 +612,6 @@
     renderAllCharts();
     initValuation();
     initComparables();
+    initExplodedControls();
   });
 })();

@@ -542,6 +542,99 @@ a {
   height: 240px;
 }
 
+.exploded-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 122, 24, 0.4);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 122, 24, 0.18), rgba(0, 0, 0, 0.34)),
+    rgba(12, 12, 13, 0.92);
+  box-shadow: 0 0 18px rgba(255, 122, 24, 0.18);
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.exploded-toggle::before {
+  width: 16px;
+  height: 16px;
+  content: "";
+  background:
+    linear-gradient(var(--orange-2), var(--orange-2)) left top / 7px 2px no-repeat,
+    linear-gradient(var(--orange-2), var(--orange-2)) left top / 2px 7px no-repeat,
+    linear-gradient(var(--orange-2), var(--orange-2)) right top / 7px 2px no-repeat,
+    linear-gradient(var(--orange-2), var(--orange-2)) right top / 2px 7px no-repeat,
+    linear-gradient(var(--orange-2), var(--orange-2)) left bottom / 7px 2px no-repeat,
+    linear-gradient(var(--orange-2), var(--orange-2)) left bottom / 2px 7px no-repeat,
+    linear-gradient(var(--orange-2), var(--orange-2)) right bottom / 7px 2px no-repeat,
+    linear-gradient(var(--orange-2), var(--orange-2)) right bottom / 2px 7px no-repeat;
+}
+
+.exploded-toggle:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 122, 24, 0.72);
+  box-shadow: var(--glow);
+}
+
+.exploded-active {
+  position: fixed;
+  inset: 7vh 7vw;
+  z-index: 999;
+  width: auto;
+  height: auto;
+  padding: 26px;
+  overflow: auto;
+  border-color: rgba(255, 122, 24, 0.58);
+  background:
+    radial-gradient(circle at 18% 8%, rgba(255, 122, 24, 0.14), transparent 28rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.02)),
+    linear-gradient(180deg, rgba(20, 20, 23, 0.98), rgba(5, 5, 6, 0.98));
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.75), var(--glow);
+}
+
+body.exploded-backdrop-active {
+  overflow: hidden;
+}
+
+body.exploded-backdrop-active::before {
+  z-index: 998;
+  opacity: 0.86;
+  background: rgba(0, 0, 0, 0.74);
+  mask-image: none;
+}
+
+.exploded-active .chart-frame {
+  height: calc(100% - 92px);
+  min-height: 460px;
+}
+
+.exploded-active .chart-frame.short,
+.exploded-active .chart-frame.tall {
+  height: calc(100% - 92px);
+}
+
+.formula-box.exploded-active {
+  display: grid;
+  align-content: center;
+}
+
+.formula-box.exploded-active .math-formula {
+  font-size: 1.28rem;
+}
+
+.exploded-active .exploded-toggle::before {
+  background:
+    linear-gradient(var(--orange-2), var(--orange-2)) center / 16px 2px no-repeat,
+    linear-gradient(var(--orange-2), var(--orange-2)) center / 2px 16px no-repeat;
+  transform: rotate(45deg);
+}
+
 canvas {
   width: 100% !important;
   height: 100% !important;
@@ -613,11 +706,40 @@ canvas {
   margin-top: 16px;
 }
 
+.heatmap-explainer {
+  max-width: 820px;
+  margin: 12px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.heatmap-legend {
+  display: grid;
+  grid-template-columns: max-content minmax(150px, 260px) max-content;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.heatmap-legend i {
+  display: block;
+  height: 10px;
+  border: 1px solid rgba(255, 122, 24, 0.28);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 122, 24, 0.2), rgba(255, 122, 24, 0.9));
+  box-shadow: 0 0 16px rgba(255, 122, 24, 0.2);
+}
+
 .risk-heatmap {
-  width: 100%;
-  min-width: 560px;
+  width: max-content;
   border-collapse: separate;
   border-spacing: 7px;
+  table-layout: fixed;
+  margin: 0 auto;
 }
 
 .risk-heatmap th {
@@ -626,8 +748,20 @@ canvas {
   text-align: center;
 }
 
+.risk-heatmap thead th:first-child,
+.risk-heatmap tbody th {
+  width: 76px;
+  min-width: 76px;
+}
+
+.risk-heatmap thead th:not(:first-child) {
+  width: 128px;
+  min-width: 128px;
+}
+
 .risk-heatmap td {
-  width: 110px;
+  width: 128px;
+  min-width: 128px;
   height: 48px;
   border: 1px solid rgba(255, 122, 24, 0.26);
   border-radius: 6px;
@@ -636,6 +770,23 @@ canvas {
   font-weight: 800;
   text-align: center;
   box-shadow: inset 0 0 22px rgba(255, 122, 24, 0.1);
+}
+
+.exploded-active .risk-heatmap thead th:first-child,
+.exploded-active .risk-heatmap tbody th {
+  width: 82px;
+  min-width: 82px;
+}
+
+.exploded-active .risk-heatmap thead th:not(:first-child),
+.exploded-active .risk-heatmap td {
+  width: 148px;
+  min-width: 148px;
+}
+
+.exploded-active .risk-heatmap td {
+  height: 58px;
+  font-size: 1rem;
 }
 
 .valuation-console {
@@ -1116,6 +1267,17 @@ select {
 }
 
 @media (max-width: 760px) {
+  .exploded-active {
+    inset: 5vh 4vw;
+    padding: 18px;
+  }
+
+  .exploded-active .chart-frame,
+  .exploded-active .chart-frame.short,
+  .exploded-active .chart-frame.tall {
+    min-height: 360px;
+  }
+
   .side-nav nav,
   .company-card-grid,
   .server-card-grid,

@@ -1077,7 +1077,12 @@ def risk_heatmap(df: pd.DataFrame) -> dict[str, Any]:
                     }
                 )
         rows.append({"year": year, "cells": year_cells})
-    return {"years": recent_years, "companies": companies, "rows": rows}
+    return {
+        "years": recent_years,
+        "companies": companies,
+        "rows": rows,
+        "explanation": "Relative 0-100 balance-sheet pressure score. Higher/brighter cells mean more risk pressure from higher debt/equity, lower current ratio, and lower interest coverage.",
+    }
 
 
 def build_bridge_chart(latest: pd.DataFrame) -> dict[str, Any]:

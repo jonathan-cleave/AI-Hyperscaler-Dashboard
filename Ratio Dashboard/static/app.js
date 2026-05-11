@@ -100,7 +100,20 @@
       },
       scales: {
         x: {
-          ticks: { color: "#a7a19a", maxRotation: 0 },
+          ticks: {
+            color: "#a7a19a",
+            maxRotation: 0,
+            autoSkip: false,
+            callback: function (value, index) {
+              const labels = this.chart.data.labels || [];
+              const label = labels[index];
+              const year = Number(label);
+              if (labels.length >= 8 && Number.isInteger(year) && year >= 1900 && year <= 2100) {
+                return year % 2 === 0 ? label : "";
+              }
+              return label;
+            }
+          },
           grid: { color: "rgba(255,255,255,0.055)" }
         },
         y: {

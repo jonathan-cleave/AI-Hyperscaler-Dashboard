@@ -69,7 +69,20 @@
             color: "#d9d1c9",
             boxWidth: 10,
             boxHeight: 10,
-            usePointStyle: true
+            usePointStyle: true,
+            generateLabels: function (chart) {
+              const labels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+              if (labels.length === 1) {
+                return labels.map((label) => ({
+                  ...label,
+                  fillStyle: "rgba(0,0,0,0)",
+                  strokeStyle: "rgba(0,0,0,0)",
+                  lineWidth: 0,
+                  pointStyle: false
+                }));
+              }
+              return labels;
+            }
           }
         },
         tooltip: {

@@ -58,12 +58,25 @@
     canvas.replaceWith(div);
   }
 
-  function commonOptions(formatType) {
+  function commonOptions(formatType, directionText) {
     return {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
       plugins: {
+        subtitle: {
+          display: Boolean(directionText),
+          text: directionText || "",
+          color: "#9a9690",
+          font: {
+            size: 12,
+            weight: "700"
+          },
+          padding: {
+            top: 0,
+            bottom: 4
+          }
+        },
         legend: {
           labels: {
             color: "#d9d1c9",
@@ -91,6 +104,14 @@
           borderWidth: 1,
           titleColor: "#fff4e7",
           bodyColor: "#e4ddd6",
+          itemSort: function (a, b) {
+            const aValue = Number(a.parsed && a.parsed.y);
+            const bValue = Number(b.parsed && b.parsed.y);
+            if (!Number.isFinite(aValue) && !Number.isFinite(bValue)) return 0;
+            if (!Number.isFinite(aValue)) return 1;
+            if (!Number.isFinite(bValue)) return -1;
+            return bValue - aValue;
+          },
           callbacks: {
             label: function (context) {
               return `${context.dataset.label}: ${format(context.parsed.y, formatType)}`;
@@ -152,7 +173,7 @@
           };
         })
       },
-      options: commonOptions(chart.format)
+      options: commonOptions(chart.format, chart.direction)
     });
   }
 
@@ -173,7 +194,7 @@
           borderRadius: 6
         }]
       },
-      options: commonOptions(chart.format)
+      options: commonOptions(chart.format, chart.direction)
     });
   }
 
@@ -194,7 +215,7 @@
           borderRadius: 5
         }))
       },
-      options: commonOptions(chart.format)
+      options: commonOptions(chart.format, chart.direction)
     });
   }
 
@@ -303,7 +324,7 @@
           }
         ]
       },
-      options: commonOptions("money_m")
+      options: commonOptions("money_m", "Higher is Better")
     });
   }
 
@@ -548,7 +569,7 @@
           borderRadius: 6
         }]
       },
-      options: commonOptions("number")
+      options: commonOptions("number", "Lower is Better")
     });
   }
 

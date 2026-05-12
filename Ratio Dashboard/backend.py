@@ -481,9 +481,48 @@ def records_by_metric(df: pd.DataFrame, metric: str) -> list[dict[str, Any]]:
     ]
 
 
+def chart_direction(metric: str | None, title: str | None = None) -> str:
+    lower_is_better = {
+        "CapEx / Revenue",
+        "PPE / Assets",
+        "Asset Growth",
+        "Debt / Equity",
+        "Debt / Assets",
+        "Debt / Capital",
+        "P/E",
+        "Price / Sales",
+        "EV / EBITDA",
+    }
+    higher_is_better = {
+        "Revenue Growth",
+        "Gross Margin",
+        "EBITDA Margin",
+        "Operating Margin",
+        "Net Profit Margin",
+        "ROA",
+        "ROE",
+        "ROIC",
+        "Current Ratio",
+        "Quick Ratio",
+        "Interest Coverage",
+        "Op Cash / Revenue",
+        "FCF Margin",
+        "Revenue",
+        "EBITDA",
+        "CAPEX",
+    }
+    if metric in lower_is_better:
+        return "Lower is Better"
+    if metric in higher_is_better:
+        return "Higher is Better"
+    if title and "rank" in title.lower():
+        return "Lower is Better"
+    return "Higher is Better"
+
+
 def make_line_chart(df: pd.DataFrame, metric: str, title: str | None = None) -> dict[str, Any]:
     if df.empty or metric not in df.columns:
-        return {"id": slug(metric), "title": title or metric, "labels": [], "series": [], "format": metric_format(metric)}
+        return {"id": slug(metric), "title": title or metric, "labels": [], "series": [], "format": metric_format(metric), "direction": chart_direction(metric, title)}
     years = sorted(df["Year"].dropna().astype(int).unique().tolist())
     series = []
     for ticker, group in df.sort_values(["Ticker Order", "Year"]).groupby("Ticker", sort=False):
@@ -507,13 +546,14 @@ def make_line_chart(df: pd.DataFrame, metric: str, title: str | None = None) -> 
         "labels": years,
         "series": series,
         "format": metric_format(metric),
+        "direction": chart_direction(metric, title),
     }
 
 
 def make_latest_bar(df: pd.DataFrame, metric: str, title: str | None = None) -> dict[str, Any]:
     latest = latest_rows(df)
     if latest.empty or metric not in latest.columns:
-        return {"id": f"{slug(metric)}-bar", "title": title or metric, "labels": [], "values": [], "format": metric_format(metric)}
+        return {"id": f"{slug(metric)}-bar", "title": title or metric, "labels": [], "values": [], "format": metric_format(metric), "direction": chart_direction(metric, title)}
     latest = latest.sort_values("Ticker Order")
     return {
         "id": f"{slug(metric)}-bar",
@@ -522,6 +562,7 @@ def make_latest_bar(df: pd.DataFrame, metric: str, title: str | None = None) -> 
         "labels": latest["Display Ticker"].tolist(),
         "values": [safe_float(value) for value in latest[metric].tolist()],
         "format": metric_format(metric),
+        "direction": chart_direction(metric, title),
     }
 
 
@@ -1106,6 +1147,7 @@ def build_bridge_chart(latest: pd.DataFrame) -> dict[str, Any]:
             {"label": "Free cash flow", "values": fcf_values},
         ],
         "format": "money_m",
+        "direction": "Higher is Better",
     }
 
 
@@ -1363,6 +1405,7 @@ def ranking_payload(ratios: pd.DataFrame) -> dict[str, Any]:
         "labels": [item["Display Ticker"] for item in latest.sort_values("Ticker Order").to_dict("records")],
         "datasets": [],
         "format": "rank",
+        "direction": "Lower is Better",
     }
     for ranking in rankings:
         rank_by_ticker = {item["ticker"]: item["rank"] for item in ranking["items"]}

@@ -573,7 +573,7 @@
       data: {
         labels: matches.map((match) => match.ticker),
         datasets: [{
-          label: result.distance_column || "Distance",
+          label: result.distance_column ? result.distance_column.replaceAll("_", " ") : "Distance",
           data: matches.map((match) => match.distance),
           backgroundColor: matches.map((match, index) => translucentColorForLabel(match.ticker, colors[index % colors.length], "cc")),
           borderColor: matches.map((match, index) => colorForLabel(match.ticker, colors[index % colors.length])),

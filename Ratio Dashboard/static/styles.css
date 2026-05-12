@@ -318,6 +318,7 @@ a {
 
 .span-5 { grid-column: span 5; }
 .span-7 { grid-column: span 7; }
+.span-12 { grid-column: span 12; }
 
 .story-panel,
 .chart-card,
@@ -1299,7 +1300,8 @@ select {
   }
 
   .span-5,
-  .span-7 {
+  .span-7,
+  .span-12 {
     grid-column: auto;
   }
 

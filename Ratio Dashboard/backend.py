@@ -1148,6 +1148,7 @@ def build_bridge_chart(latest: pd.DataFrame) -> dict[str, Any]:
         ],
         "format": "money_m",
         "direction": "Higher is Better",
+        "color_by": "dataset",
     }
 
 
@@ -1434,10 +1435,8 @@ def build_pages(
         "story_window": f"{int(ratios['Year'].min())}-{int(ratios['Year'].max())}",
         "cards": company_cards(latest, comps),
         "takeaways": home_takeaways(latest),
-        "capital_chain": capital_burden_chain(latest),
         "charts": [
             make_line_chart(ratios, "Revenue Growth", "Revenue Growth Trend"),
-            make_line_chart(ratios, "CapEx / Revenue", "Capex Intensity Trend"),
         ],
     }
 

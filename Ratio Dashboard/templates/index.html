@@ -2,7 +2,7 @@
 
 {% block content %}
 <section class="story-grid">
-  <article class="story-panel span-7">
+  <article class="story-panel span-12">
     <div class="section-heading">
       <p class="eyebrow">Executive question</p>
       <h2>Who wins the AI infrastructure cycle?</h2>
@@ -13,24 +13,6 @@
         <div class="takeaway">
           <span class="pulse-node"></span>
           <p>{{ item }}</p>
-        </div>
-      {% endfor %}
-    </div>
-  </article>
-
-  <article class="story-panel span-5 rack-panel">
-    <div class="section-heading">
-      <p class="eyebrow">AI infrastructure chain</p>
-      <h2>Cloud capital burden</h2>
-    </div>
-    <div class="rack-chain">
-      {% for company in payload.capital_chain %}
-        <div class="rack-unit">
-          <div class="mini-rack">
-            <span style="height: {{ company.fill }}%"></span>
-          </div>
-          <strong>{{ company.display_ticker }}</strong>
-          <small>Capex / revenue {{ company.capex_revenue | pct }}</small>
         </div>
       {% endfor %}
     </div>
@@ -57,7 +39,7 @@
   {% endfor %}
 </section>
 
-<section class="chart-grid two">
+<section class="chart-grid one">
   {% for chart in payload.charts %}
     <article class="chart-card">
       <div class="section-heading tight">

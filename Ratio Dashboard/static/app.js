@@ -202,18 +202,30 @@
     const canvas = document.getElementById(chart.id);
     if (!canvas) return;
     if (!window.Chart) return fallback(canvas);
+    const colorByDataset = chart.color_by === "dataset";
     new Chart(canvas, {
       type: "bar",
       data: {
         labels: chart.labels || [],
-        datasets: (chart.datasets || []).map((dataset, index) => ({
-          label: dataset.label,
-          data: dataset.values,
-          backgroundColor: (dataset.values || []).map((_, labelIndex) => translucentColorForLabel((chart.labels || [])[labelIndex], colors[index % colors.length], "c7")),
-          borderColor: (dataset.values || []).map((_, labelIndex) => colorForLabel((chart.labels || [])[labelIndex], colors[index % colors.length])),
-          borderWidth: 1.2,
-          borderRadius: 5
-        }))
+        datasets: (chart.datasets || []).map((dataset, index) => {
+          const datasetColor = colors[index % colors.length];
+          return {
+            label: dataset.label,
+            data: dataset.values,
+            backgroundColor: (dataset.values || []).map((_, labelIndex) => (
+              colorByDataset
+                ? `${datasetColor}c7`
+                : translucentColorForLabel((chart.labels || [])[labelIndex], datasetColor, "c7")
+            )),
+            borderColor: (dataset.values || []).map((_, labelIndex) => (
+              colorByDataset
+                ? datasetColor
+                : colorForLabel((chart.labels || [])[labelIndex], datasetColor)
+            )),
+            borderWidth: 1.2,
+            borderRadius: 5
+          };
+        })
       },
       options: commonOptions(chart.format, chart.direction)
     });

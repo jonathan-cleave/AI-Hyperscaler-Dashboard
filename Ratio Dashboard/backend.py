@@ -1406,6 +1406,7 @@ def ranking_payload(ratios: pd.DataFrame) -> dict[str, Any]:
         "datasets": [],
         "format": "rank",
         "direction": "Lower is Better",
+        "color_by": "dataset",
     }
     for ranking in rankings:
         rank_by_ticker = {item["ticker"]: item["rank"] for item in ranking["items"]}

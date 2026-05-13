@@ -140,7 +140,7 @@ def metric_format(metric: str) -> str:
         return "percent"
     if metric in MULTIPLE_METRICS:
         return "multiple"
-    if metric in {"Revenue", "EBITDA", "CAPEX", "Net Debt", "EV", "Equity"}:
+    if metric in {"Revenue", "EBITDA", "CAPEX", "Net Debt", "EV", "Equity", "Operating Leases", "Finance Leases"}:
         return "money_m"
     return "number"
 
@@ -492,6 +492,8 @@ def chart_direction(metric: str | None, title: str | None = None) -> str:
         "CapEx / Revenue",
         "PPE / Assets",
         "Asset Growth",
+        "Operating Leases",
+        "Finance Leases",
         "Debt / Equity",
         "Debt / Assets",
         "Debt / Capital",
@@ -1458,10 +1460,10 @@ def build_pages(
         ],
     }
 
-    capital_metrics = ["CapEx / Revenue", "PPE / Assets", "Asset Growth"]
+    capital_metrics = ["CapEx / Revenue", "PPE / Assets", "Operating Leases", "Finance Leases"]
     pages["capital"] = {
         "line_charts": [make_line_chart(ratios, metric) for metric in capital_metrics],
-        "bar_charts": [make_latest_bar(ratios, "CapEx / Revenue", "Latest Capex / Revenue")],
+        "bar_charts": [],
         "server_cards": capital_burden_chain(latest),
         "commentary": [
             metric_commentary(latest, "CapEx / Revenue", True, "A high ratio indicates that more revenue is being recycled into AI and data center capacity."),

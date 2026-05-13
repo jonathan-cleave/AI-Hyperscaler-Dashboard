@@ -624,6 +624,11 @@ a {
   gap: 12px;
 }
 
+.insight-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
 .takeaway {
   display: grid;
   grid-template-columns: 16px 1fr;
@@ -1542,6 +1547,7 @@ select {
   .model-grid,
   .valuation-output-grid,
   .rack-chain,
+  .insight-row,
   .mode-segments,
   .comps-result-grid {
     grid-template-columns: 1fr;

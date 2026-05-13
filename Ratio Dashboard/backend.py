@@ -35,6 +35,14 @@ COMPANY_NAMES = {
 
 DISPLAY_TICKERS = {"GOOG": "GOOGL"}
 ORDER_HINT = ["AMZN", "MSFT", "META", "GOOG", "GOOGL"]
+FIXED_SHARE_PRICE_DATE = "2026-05-13"
+FIXED_SHARE_PRICES = {
+    "AMZN": 265.79,
+    "MSFT": 407.68,
+    "META": 603.00,
+    "GOOG": 387.35,
+    "GOOGL": 387.35,
+}
 
 PERCENT_METRICS = {
     "Revenue Growth",
@@ -1244,13 +1252,16 @@ def build_valuation_models(
         comp = comps.get(ticker, {})
         shares = shares_lookup.get(ticker)
         market_equity = safe_float(comp.get("Equity"))
-        current_price = safe_div(market_equity, shares) if market_equity is not None and shares else safe_float(row.get("Current Price"))
+        current_price = FIXED_SHARE_PRICES.get(ticker)
+        if current_price is None:
+            current_price = safe_div(market_equity, shares) if market_equity is not None and shares else safe_float(row.get("Current Price"))
         base_revenue = safe_float(row.get("Revenue")) or 0
         default_growth = safe_float(row.get("Revenue Growth")) or 0.05
         default_margin = safe_float(row.get("EBITDA Margin")) or safe_div(row.get("EBITDA"), row.get("Revenue")) or 0.25
         default_multiple = safe_float(comp.get("EV/EBITDA")) or safe_float(row.get("EV / EBITDA")) or 15
         default_net_debt = safe_float(row.get("Net Debt")) or 0
         default_wacc = safe_float(comp.get("WACC") or comp.get("Assumption WACC")) or 0.10
+        default_ltgr = 0.05
         default_shares = shares or 1
 
         if ticker == "MSFT" and msft_sheet:
@@ -1264,6 +1275,7 @@ def build_valuation_models(
             "exit_multiple": default_multiple,
             "net_debt": default_net_debt,
             "wacc": default_wacc,
+            "ltgr": default_ltgr,
             "shares": default_shares,
         }
         models[ticker] = {
@@ -1289,6 +1301,7 @@ def build_valuation_models(
                 "tax_rate": safe_float(comp.get("Tax Rate")),
                 "long_term_growth": 0.021,
                 "risk_free_rate": 0.0375,
+                "ltgr": default_ltgr,
                 "beta": safe_float(comp.get("Beta")),
                 "rf": safe_float(comp.get("Rf")),
                 "mrp": safe_float(comp.get("MRP")),
@@ -1308,18 +1321,33 @@ def calculate_valuation(
     exit_multiple: float,
     net_debt: float,
     wacc: float,
+    ltgr: float,
     shares: float,
 ) -> dict[str, Any]:
     projection = []
     forecast_revenue = base_revenue
     forecast_ebitda = 0.0
+    start_growth = revenue_growth
+    end_growth = ltgr
+    if start_growth > -1 and end_growth > -1 and start_growth not in (0, None):
+        growth_decay = ((1 + end_growth) / (1 + start_growth)) ** (1 / 4)
+    else:
+        growth_decay = None
     for year in range(1, 6):
-        forecast_revenue = base_revenue * ((1 + revenue_growth) ** year)
+        if year == 1:
+            growth_rate = start_growth
+        elif growth_decay is not None:
+            growth_rate = ((1 + start_growth) * (growth_decay ** (year - 1))) - 1
+        else:
+            growth_rate = start_growth + ((end_growth - start_growth) * ((year - 1) / 4))
+        forecast_revenue = forecast_revenue * (1 + growth_rate)
         forecast_ebitda = forecast_revenue * ebitda_margin
         discount_factor = (1 + wacc) ** year
         projection.append(
             {
                 "label": f"Year {year}",
+                "growth_rate": growth_rate,
+                "revenue": forecast_revenue,
                 "projected": forecast_ebitda,
                 "present_value": safe_div(forecast_ebitda, discount_factor),
             }
@@ -1556,7 +1584,7 @@ def build_pages(
         "models": valuation_models,
         "initial_company": "MSFT" if "MSFT" in valuation_models else next(iter(valuation_models), None),
         "msft_valuation": msft_valuation,
-        "formula": "Implied Share Price = (((Revenue x (1 + Revenue Growth)) x EBITDA Margin x Exit EV/EBITDA Multiple) - Net Debt) / Shares Outstanding",
+        "formula": "Implied Share Price = (sum(PV EBITDA years 1-5) + PV Terminal Value - Net Debt) / Shares Outstanding",
     }
 
     pages["comparables"] = {
@@ -1766,6 +1794,7 @@ def valuation_calculate():
             "exit_multiple": float(body.get("exit_multiple", defaults["exit_multiple"])),
             "net_debt": defaults["net_debt"],
             "wacc": float(body.get("wacc", defaults["wacc"])),
+            "ltgr": defaults["ltgr"],
             "shares": float(body.get("shares", defaults["shares"])),
         }
     except (TypeError, ValueError):

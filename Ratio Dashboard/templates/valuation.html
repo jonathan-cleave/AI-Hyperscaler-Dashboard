@@ -64,7 +64,7 @@
 
     <div class="model-grid">
       <div class="input-card" data-control="revenue_growth" data-scale="100">
-        <label>Revenue growth assumption</label>
+        <label>Year 1 revenue growth assumption</label>
         <input id="revenueGrowthSlider" type="range">
         <input id="revenueGrowthInput" type="number">
       </div>
@@ -81,12 +81,12 @@
     </div>
 
     <div class="valuation-output-grid">
-      <div><span>Forecast revenue</span><strong id="forecastRevenue"></strong></div>
+      <div><span>Year 5 forecast revenue</span><strong id="forecastRevenue"></strong></div>
       <div><span>Forecast EBITDA</span><strong id="forecastEbitda"></strong></div>
       <div><span>Enterprise value</span><strong id="enterpriseValue"></strong></div>
       <div><span>Equity value</span><strong id="equityValue"></strong></div>
       <div class="final-price"><span>Implied share price</span><strong id="impliedPrice"></strong></div>
-      <div><span>Upside / downside</span><strong id="upsideDownside"></strong></div>
+      <div><span>Actual share price</span><strong id="actualSharePrice"></strong></div>
     </div>
   </article>
 
@@ -98,11 +98,11 @@
         \[
         \text{Implied Share Price} =
         \frac{
-          \frac{
-            \left(\text{Revenue} \times (1 + \text{Revenue Growth})\right)
-            \times \text{EBITDA Margin}
-            \times \text{Exit EV/EBITDA Multiple}
-          }{1 + \text{WACC}}
+          \sum_{t=1}^{5}
+          \frac{\text{EBITDA}_{t}}{(1+\text{WACC})^{t}}
+          +
+          \frac{\text{EBITDA}_{5} \times \text{Exit EV/EBITDA Multiple}}
+          {(1+\text{WACC})^{5}}
           - \text{Net Debt}
         }{
           \text{Shares Outstanding}

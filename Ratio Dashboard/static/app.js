@@ -452,7 +452,8 @@
       ["Cost of debt", assumptions.cost_of_debt, "percent"],
       ["Cost of equity", assumptions.cost_of_equity, "percent"],
       ["Tax rate", assumptions.tax_rate, "percent"],
-      ["Long-term growth", assumptions.long_term_growth, "percent"],
+      ["TV growth", assumptions.long_term_growth, "percent"],
+      ["LTGR", assumptions.ltgr, "percent"],
       ["Risk-free rate", assumptions.risk_free_rate, "percent"],
       ["Beta", assumptions.beta, "number"],
       ["Market equity", assumptions.market_equity, "money_m"]
@@ -490,13 +491,8 @@
         setText("enterpriseValue", format(outputs.enterprise_value, "money_m"));
         setText("equityValue", format(outputs.equity_value, "money_m"));
         setText("impliedPrice", format(outputs.implied_share_price, "price"));
+        setText("actualSharePrice", format(outputs.current_price, "price"));
         updateModelFcffChart(outputs);
-        const upside = document.getElementById("upsideDownside");
-        if (upside) {
-          upside.textContent = format(outputs.upside_downside, "percent");
-          upside.classList.toggle("positive", isNumber(outputs.upside_downside) && outputs.upside_downside >= 0);
-          upside.classList.toggle("negative", isNumber(outputs.upside_downside) && outputs.upside_downside < 0);
-        }
       })
       .catch((error) => {
         setText("impliedPrice", error.message || "n/a");

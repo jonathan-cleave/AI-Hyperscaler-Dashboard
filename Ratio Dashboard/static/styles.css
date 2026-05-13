@@ -413,9 +413,9 @@ a {
   inset: 0;
   z-index: 0;
   display: grid;
-  place-items: center;
+  place-items: center start;
   pointer-events: none;
-  opacity: 0.66;
+  opacity: 0.74;
   filter: saturate(1.2) contrast(1.1);
   transform: scale(1.13);
 }
@@ -452,11 +452,26 @@ a {
 
 .hyperscaler-rack {
   position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(4, minmax(70px, 1fr));
   gap: 16px;
-  width: min(760px, 96%);
+  width: min(720px, 62%);
   height: min(540px, 78vh);
+  margin-left: clamp(36px, 7vw, 118px);
+}
+
+.hyperscaler-rack::before {
+  position: absolute;
+  inset: -42px -34px;
+  z-index: -1;
+  content: "";
+  border-radius: 28px;
+  background:
+    radial-gradient(ellipse at 54% 44%, rgba(255, 122, 24, 0.3), transparent 58%),
+    radial-gradient(ellipse at 86% 56%, rgba(94, 231, 255, 0.12), transparent 44%),
+    linear-gradient(90deg, rgba(255, 122, 24, 0.18), transparent 74%);
+  filter: blur(16px);
 }
 
 .rack-tower {
@@ -464,12 +479,12 @@ a {
   grid-template-rows: repeat(9, 1fr);
   gap: 7px;
   padding: 12px;
-  border: 1px solid rgba(255, 122, 24, 0.28);
+  border: 1px solid rgba(255, 122, 24, 0.38);
   border-radius: var(--radius);
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.08)),
-    rgba(0, 0, 0, 0.42);
-  box-shadow: inset 0 0 34px rgba(255, 122, 24, 0.13), 0 0 34px rgba(255, 122, 24, 0.2);
+    linear-gradient(90deg, rgba(255, 255, 255, 0.085), rgba(0, 0, 0, 0.08)),
+    rgba(0, 0, 0, 0.38);
+  box-shadow: inset 0 0 38px rgba(255, 122, 24, 0.17), 0 0 42px rgba(255, 122, 24, 0.25);
 }
 
 .rack-tower span {
@@ -515,22 +530,69 @@ a {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  opacity: 0.9;
+}
+
+.fiber-cable-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.fiber-dock rect {
+  fill: rgba(14, 14, 16, 0.72);
+  stroke: rgba(255, 122, 24, 0.46);
+  stroke-width: 1.5;
+}
+
+.fiber-strands path {
+  fill: none;
+  stroke: url(#glassCable);
+  stroke-width: 5.5;
+  stroke-linecap: round;
   opacity: 0.78;
 }
 
-.fiber-lines i {
-  position: absolute;
-  right: 8%;
-  left: 8%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 122, 24, 0.8), rgba(94, 231, 255, 0.4), transparent);
-  animation: fiberPulse 3.2s infinite ease-in-out;
+.fiber-strands path:nth-child(odd) {
+  stroke-width: 4.4;
+  opacity: 0.7;
 }
 
-.fiber-lines i:nth-child(1) { top: 24%; animation-delay: 0s; }
-.fiber-lines i:nth-child(2) { top: 43%; animation-delay: 0.45s; }
-.fiber-lines i:nth-child(3) { top: 62%; animation-delay: 0.9s; }
-.fiber-lines i:nth-child(4) { top: 78%; animation-delay: 1.35s; }
+.fiber-strands path:nth-child(3n) {
+  stroke-width: 6.4;
+  opacity: 0.62;
+}
+
+.fiber-clamps rect {
+  fill: rgba(7, 7, 9, 0.82);
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+
+.fiber-lights .pulse {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 4px;
+  stroke-opacity: 0.14;
+}
+
+.fiber-lights .red { color: #ff3b30; }
+.fiber-lights .green { color: #7fba00; }
+.fiber-lights .blue { color: #5ee7ff; }
+.fiber-lights .purple { color: #a855f7; }
+.fiber-lights .yellow { color: #ffd166; }
+.fiber-lights .orange { color: #ff7a18; }
+
+.page-leaving .fiber-cable-svg {
+  display: none;
+}
+
+.page-leaving .rack-tower span::before,
+.page-leaving .rack-tower span::after {
+  animation: none;
+}
 
 @keyframes serverBlink {
   0%, 100% {
@@ -553,17 +615,6 @@ a {
   0% { transform: translateX(-18%); opacity: 0.18; }
   45% { opacity: 0.95; }
   100% { transform: translateX(18%); opacity: 0.22; }
-}
-
-@keyframes fiberPulse {
-  0%, 100% {
-    transform: scaleX(0.3);
-    opacity: 0.18;
-  }
-  50% {
-    transform: scaleX(1);
-    opacity: 0.95;
-  }
 }
 
 .takeaway-list,

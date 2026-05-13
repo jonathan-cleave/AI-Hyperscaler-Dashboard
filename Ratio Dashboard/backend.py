@@ -63,7 +63,7 @@ MULTIPLE_METRICS = {
 NAV_ITEMS = [
     {"key": "intro", "label": "Intro", "href": "/intro"},
     {"key": "comparables", "label": "Comps Finder", "href": "/comparables"},
-    {"key": "home", "label": "Broad Comparison", "href": "/"},
+    {"key": "home", "label": "Broad Comparison", "href": "/broad-comparison"},
     {"key": "profitability", "label": "Profitability", "href": "/profitability"},
     {"key": "capital", "label": "Capital Intensity", "href": "/capital-intensity"},
     {"key": "leverage", "label": "Liquidity + Leverage", "href": "/leverage"},
@@ -1635,6 +1635,11 @@ def number_filter(value: Any) -> str:
 
 @app.route("/")
 def index():
+    return render_dashboard("intro", "intro.html")
+
+
+@app.route("/broad-comparison")
+def broad_comparison():
     return render_dashboard("home", "index.html")
 
 

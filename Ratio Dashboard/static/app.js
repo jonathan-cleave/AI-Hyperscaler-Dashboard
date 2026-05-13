@@ -58,6 +58,18 @@
     canvas.replaceWith(div);
   }
 
+  function initFastNavigation() {
+    document.querySelectorAll(".side-nav a").forEach((link) => {
+      link.addEventListener("click", (event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        if (link.target === "_blank") return;
+        const href = link.getAttribute("href");
+        if (!href || href === window.location.pathname) return;
+        document.body.classList.add("page-leaving");
+      });
+    });
+  }
+
   function commonOptions(formatType, directionText) {
     return {
       responsive: true,
@@ -642,6 +654,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
+    initFastNavigation();
     renderAllCharts();
     initValuation();
     initComparables();

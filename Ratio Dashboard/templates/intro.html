@@ -13,7 +13,61 @@
       {% endfor %}
     </div>
     <div class="fiber-lines" aria-hidden="true">
-      <i></i><i></i><i></i><i></i>
+      <svg class="fiber-cable-svg" viewBox="0 0 1000 650" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="glassCable" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22" />
+            <stop offset="45%" stop-color="#c6e8ff" stop-opacity="0.38" />
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0.14" />
+          </linearGradient>
+        </defs>
+
+        <g class="fiber-dock">
+          <rect x="606" y="186" width="36" height="212" rx="8"></rect>
+          <rect x="772" y="536" width="172" height="58" rx="8"></rect>
+        </g>
+
+        <g class="fiber-strands">
+          <path id="fiberPath1" d="M640 205 C700 204 724 230 746 291 C778 371 807 444 862 564" />
+          <path id="fiberPath2" d="M640 224 C708 222 734 247 754 305 C785 383 817 450 876 565" />
+          <path id="fiberPath3" d="M640 244 C716 242 743 266 762 319 C793 394 827 457 890 566" />
+          <path id="fiberPath4" d="M640 264 C724 262 752 285 770 333 C801 405 836 464 904 568" />
+          <path id="fiberPath5" d="M640 284 C730 281 760 304 778 347 C810 417 844 472 916 570" />
+          <path id="fiberPath6" d="M640 304 C735 301 766 324 786 362 C819 431 853 480 926 572" />
+          <path id="fiberPath7" d="M640 324 C737 322 770 345 794 379 C827 443 860 489 934 574" />
+          <path id="fiberPath8" d="M640 344 C736 343 772 366 802 397 C835 456 866 499 940 576" />
+          <path id="fiberPath9" d="M640 364 C730 365 772 388 810 417 C844 470 872 510 944 580" />
+          <path id="fiberPath10" d="M640 384 C724 387 772 408 818 438 C852 486 879 522 948 584" />
+        </g>
+
+        <g class="fiber-clamps">
+          <rect x="690" y="314" width="78" height="28" rx="5" transform="rotate(61 729 328)"></rect>
+          <rect x="823" y="489" width="82" height="28" rx="5" transform="rotate(55 864 503)"></rect>
+        </g>
+
+        <g class="fiber-lights">
+          <circle r="3.6" class="pulse red" opacity="0">
+            <animate attributeName="opacity" values="0;0.9;0.35;0;0" keyTimes="0;0.1;0.38;0.58;1" dur="3.5s" repeatCount="indefinite" begin="0.1s" />
+            <animateMotion dur="3.5s" repeatCount="indefinite" begin="0.1s"><mpath href="#fiberPath1" /></animateMotion>
+          </circle>
+          <circle r="3.6" class="pulse green" opacity="0">
+            <animate attributeName="opacity" values="0;0.78;0.28;0;0" keyTimes="0;0.1;0.38;0.58;1" dur="3.8s" repeatCount="indefinite" begin="1s" />
+            <animateMotion dur="3.8s" repeatCount="indefinite" begin="1s"><mpath href="#fiberPath2" /></animateMotion>
+          </circle>
+          <circle r="3.6" class="pulse blue" opacity="0">
+            <animate attributeName="opacity" values="0;0.9;0.35;0;0" keyTimes="0;0.1;0.38;0.58;1" dur="3.6s" repeatCount="indefinite" begin="1.9s" />
+            <animateMotion dur="3.6s" repeatCount="indefinite" begin="1.9s"><mpath href="#fiberPath3" /></animateMotion>
+          </circle>
+          <circle r="3.6" class="pulse purple" opacity="0">
+            <animate attributeName="opacity" values="0;0.78;0.28;0;0" keyTimes="0;0.1;0.38;0.58;1" dur="4s" repeatCount="indefinite" begin="2.8s" />
+            <animateMotion dur="4s" repeatCount="indefinite" begin="2.8s"><mpath href="#fiberPath5" /></animateMotion>
+          </circle>
+          <circle r="3.6" class="pulse yellow" opacity="0">
+            <animate attributeName="opacity" values="0;0.9;0.35;0;0" keyTimes="0;0.1;0.38;0.58;1" dur="3.7s" repeatCount="indefinite" begin="3.7s" />
+            <animateMotion dur="3.7s" repeatCount="indefinite" begin="3.7s"><mpath href="#fiberPath7" /></animateMotion>
+          </circle>
+        </g>
+      </svg>
     </div>
   </div>
   <article class="intro-centered">

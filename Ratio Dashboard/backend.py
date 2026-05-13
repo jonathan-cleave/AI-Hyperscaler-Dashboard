@@ -91,7 +91,7 @@ PAGE_META = {
     "capital": {
         "title": "Capital Intensity",
         "eyebrow": "Data center load",
-        "subtitle": "Tracks how capex and infrastructure assets are absorbing revenue growth as AI workloads scale.",
+        "subtitle": "Tracks how companies prefer to pay for datacenters through direct purchases or operating leases.",
     },
     "leverage": {
         "title": "Liquidity and Leverage",

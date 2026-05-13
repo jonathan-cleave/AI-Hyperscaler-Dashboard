@@ -1529,7 +1529,7 @@ def build_pages(
     profitability_metrics = ["Operating Margin", "Net Profit Margin", "ROA", "ROE"]
     pages["profitability"] = {
         "line_charts": [make_line_chart(ratios, metric) for metric in profitability_metrics],
-        "bar_charts": [make_latest_bar(ratios, "Operating Margin", "Latest Operating Margin")],
+        "bar_charts": [],
         "commentary": [
             metric_commentary(latest, "Operating Margin", True, "This is the cleanest view of core operating conversion."),
             metric_commentary(latest, "Net Profit Margin", True, "Net margin captures tax, interest, and below-the-line drag."),
@@ -1545,8 +1545,20 @@ def build_pages(
         "server_cards": capital_burden_chain(latest),
         "commentary": [
             metric_commentary(latest, "CapEx / Revenue", True, "A high ratio indicates that more revenue is being recycled into AI and data center capacity."),
-            metric_commentary(latest, "PPE / Assets", True, "A higher fixed-asset mix makes the business more infrastructure-heavy."),
-            metric_commentary(latest, "Asset Growth", True, "Rapid asset growth is a signal that balance sheets are expanding to support compute demand."),
+            {
+                "title": "PPE / Assets",
+                "body": (
+                    f"{leader(latest, 'PPE / Assets', True)['Display Ticker']} leads on PPE / Assets at "
+                    f"{fmt_pct(leader(latest, 'PPE / Assets', True)['PPE / Assets'])}. "
+                    "The increasing trend shows that hyperscalers are no longer asset-light tech companies but are transitioning to capital-intensive infrastructure providers."
+                )
+                if leader(latest, "PPE / Assets", True) is not None
+                else "PPE / Assets is not available in the workbook.",
+            },
+            {
+                "title": "Leases",
+                "body": "Amazon prioritizes flexibility through operating leases of 89.3B, Microsoft emphasizes control via finance leases at 46.2B, while Meta is rapidly trying to catch up with direct cash investments through CapEx.",
+            },
         ],
     }
 

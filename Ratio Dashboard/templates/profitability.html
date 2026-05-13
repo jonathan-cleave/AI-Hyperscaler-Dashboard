@@ -2,7 +2,7 @@
 
 {% block content %}
 <section class="chart-grid two">
-  {% for chart in payload.line_charts %}
+  {% for chart in payload.line_charts[:2] %}
     <article class="chart-card">
       <div class="section-heading tight">
         <p class="eyebrow">Multi-year trend</p>
@@ -13,22 +13,25 @@
   {% endfor %}
 </section>
 
-<section class="story-grid">
-  <article class="chart-card span-7">
-    <div class="section-heading tight">
-      <p class="eyebrow">Latest-year comparison</p>
-      <h2>{{ payload.bar_charts[0].title }}</h2>
+<section class="profitability-insight-row">
+  {% for note in payload.commentary %}
+    <div class="insight-box">
+      <span class="thin-divider"></span>
+      <h3>{{ note.title }}</h3>
+      <p>{{ note.body }}</p>
     </div>
-    <div class="chart-frame"><canvas id="{{ payload.bar_charts[0].id }}"></canvas></div>
-  </article>
-  <article class="insight-stack span-5">
-    {% for note in payload.commentary %}
-      <div class="insight-box">
-        <span class="thin-divider"></span>
-        <h3>{{ note.title }}</h3>
-        <p>{{ note.body }}</p>
+  {% endfor %}
+</section>
+
+<section class="chart-grid two">
+  {% for chart in payload.line_charts[2:4] %}
+    <article class="chart-card">
+      <div class="section-heading tight">
+        <p class="eyebrow">Multi-year trend</p>
+        <h2>{{ chart.title }}</h2>
       </div>
-    {% endfor %}
-  </article>
+      <div class="chart-frame"><canvas id="{{ chart.id }}"></canvas></div>
+    </article>
+  {% endfor %}
 </section>
 {% endblock %}

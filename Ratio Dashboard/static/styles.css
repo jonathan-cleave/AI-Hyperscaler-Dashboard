@@ -626,6 +626,18 @@ a {
   gap: 12px;
 }
 
+.profitability-insight-row,
+.leverage-insight-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.leverage-insight-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .insight-row {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-bottom: 18px;
@@ -1669,7 +1681,9 @@ select {
   }
 
   .chart-grid.three,
-  .chart-grid.two {
+  .chart-grid.two,
+  .profitability-insight-row,
+  .leverage-insight-row {
     grid-template-columns: 1fr;
   }
 }
@@ -1706,13 +1720,15 @@ select {
   .side-nav nav,
   .company-card-grid,
   .server-card-grid,
-  .ranking-grid,
-  .model-grid,
-  .valuation-output-grid,
-  .rack-chain,
-  .insight-row,
-  .mode-segments,
-  .comps-result-grid {
+    .ranking-grid,
+    .model-grid,
+    .valuation-output-grid,
+    .rack-chain,
+    .insight-row,
+    .profitability-insight-row,
+    .leverage-insight-row,
+    .mode-segments,
+    .comps-result-grid {
     grid-template-columns: 1fr;
   }
 

@@ -31,16 +31,18 @@
     </aside>
 
     <main class="content">
-      <section class="page-hero">
-        <div>
-          <p class="eyebrow">{{ meta.eyebrow }}</p>
-          <h1>{{ meta.title }}</h1>
-          <p class="subtitle">{{ meta.subtitle }}</p>
-        </div>
-        <div class="hero-rack" aria-hidden="true">
-          <span></span><span></span><span></span><span></span>
-        </div>
-      </section>
+      {% if page_key != "intro" %}
+        <section class="page-hero">
+          <div>
+            <p class="eyebrow">{{ meta.eyebrow }}</p>
+            <h1>{{ meta.title }}</h1>
+            <p class="subtitle">{{ meta.subtitle }}</p>
+          </div>
+          <div class="hero-rack" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </div>
+        </section>
+      {% endif %}
 
       {% if errors %}
         <section class="alert-strip">

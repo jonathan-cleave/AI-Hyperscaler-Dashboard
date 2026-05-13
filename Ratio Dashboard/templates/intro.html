@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="intro-stage">
+  <div class="intro-rack-bg" aria-hidden="true">
+    <div class="hyperscaler-rack">
+      {% for rack in range(4) %}
+        <div class="rack-tower tower-{{ loop.index }}">
+          {% for unit in range(9) %}
+            <span></span>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+    <div class="fiber-lines" aria-hidden="true">
+      <i></i><i></i><i></i><i></i>
+    </div>
+  </div>
+  <article class="intro-centered">
+    <h2>AI Hyperscalers</h2>
+    <p>{{ meta.subtitle }}</p>
+  </article>
+</section>
+{% endblock %}

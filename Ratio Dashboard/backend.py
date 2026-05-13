@@ -61,6 +61,7 @@ MULTIPLE_METRICS = {
 }
 
 NAV_ITEMS = [
+    {"key": "intro", "label": "Intro", "href": "/intro"},
     {"key": "comparables", "label": "Comps Finder", "href": "/comparables"},
     {"key": "home", "label": "Broad Comparison", "href": "/"},
     {"key": "profitability", "label": "Profitability", "href": "/profitability"},
@@ -72,6 +73,11 @@ NAV_ITEMS = [
 ]
 
 PAGE_META = {
+    "intro": {
+        "title": "AI Hyperscalers",
+        "eyebrow": "Project introduction",
+        "subtitle": "The companies building the compute, storage, networking, and data-center infrastructure behind large-scale AI platforms.",
+    },
     "home": {
         "title": "Broad Company Comparison",
         "eyebrow": "Hyperscaler finance dashboard",
@@ -1630,6 +1636,11 @@ def number_filter(value: Any) -> str:
 @app.route("/")
 def index():
     return render_dashboard("home", "index.html")
+
+
+@app.route("/intro")
+def intro():
+    return render_dashboard("intro", "intro.html")
 
 
 @app.route("/profitability")

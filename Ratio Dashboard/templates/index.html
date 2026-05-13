@@ -1,24 +1,6 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="story-grid">
-  <article class="story-panel span-12">
-    <div class="section-heading">
-      <p class="eyebrow">Executive question</p>
-      <h2>Who wins the AI infrastructure cycle?</h2>
-    </div>
-    <p class="lead-question">Who is capturing the gains, who is carrying the capital burden, and where is financial risk building?</p>
-    <div class="takeaway-list">
-      {% for item in payload.takeaways %}
-        <div class="takeaway">
-          <span class="pulse-node"></span>
-          <p>{{ item }}</p>
-        </div>
-      {% endfor %}
-    </div>
-  </article>
-</section>
-
 <section class="company-card-grid">
   {% for card in payload.cards %}
     <article class="company-card">

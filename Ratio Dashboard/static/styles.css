@@ -1071,7 +1071,7 @@ select {
 
 .model-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -1139,6 +1139,87 @@ select {
 
 .workbook-card .metric-grid {
   margin-top: 18px;
+}
+
+.valuation-table-card {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 122, 24, 0.22);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(145deg, rgba(255, 122, 24, 0.1), rgba(255, 255, 255, 0.02)),
+    linear-gradient(180deg, rgba(27, 27, 30, 0.94), rgba(8, 8, 9, 0.94));
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.42);
+}
+
+.valuation-table-card::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  content: "";
+  background: linear-gradient(90deg, transparent, rgba(255, 122, 24, 0.7), transparent);
+}
+
+.valuation-table-wrap {
+  overflow-x: auto;
+  margin-top: 10px;
+}
+
+.valuation-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+}
+
+.valuation-table th,
+.valuation-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.075);
+  text-align: left;
+}
+
+.valuation-table th {
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.valuation-table td {
+  color: #fff2e2;
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.valuation-table tbody tr:hover {
+  background: rgba(255, 122, 24, 0.07);
+}
+
+.valuation-table tfoot td {
+  border-top: 1px solid rgba(255, 122, 24, 0.32);
+  border-bottom: 0;
+  background: rgba(255, 122, 24, 0.08);
+  color: #fff7ee;
+}
+
+.table-ticker,
+.table-company {
+  display: block;
+}
+
+.table-ticker {
+  color: var(--orange-2);
+  font-weight: 900;
+}
+
+.table-company {
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
 }
 
 .ranking-card ol {

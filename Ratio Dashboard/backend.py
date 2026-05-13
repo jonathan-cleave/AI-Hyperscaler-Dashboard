@@ -1169,6 +1169,8 @@ def build_multiples(ratios: pd.DataFrame) -> list[dict[str, Any]]:
                 "ticker": row["Ticker"],
                 "display_ticker": row["Display Ticker"],
                 "company": row["Company"],
+                "revenue_growth": safe_float(row.get("Revenue Growth")),
+                "ebitda_margin": safe_float(row.get("EBITDA Margin")),
                 "pe": safe_float(row.get("P/E")),
                 "price_sales": safe_float(row.get("Price / Sales")),
                 "ev_ebitda": safe_float(row.get("EV / EBITDA")),
@@ -1176,6 +1178,15 @@ def build_multiples(ratios: pd.DataFrame) -> list[dict[str, Any]]:
             }
         )
     return multiples
+
+
+def median_from_rows(rows: list[dict[str, Any]], keys: list[str]) -> dict[str, float | None]:
+    medians: dict[str, float | None] = {}
+    for key in keys:
+        values = [safe_float(row.get(key)) for row in rows]
+        clean = [value for value in values if value is not None]
+        medians[key] = float(np.median(clean)) if clean else None
+    return medians
 
 
 def msft_valuation_default(msft_sheet: dict[str, Any], latest_row: pd.Series) -> dict[str, Any]:
@@ -1239,6 +1250,7 @@ def build_valuation_models(
         default_margin = safe_float(row.get("EBITDA Margin")) or safe_div(row.get("EBITDA"), row.get("Revenue")) or 0.25
         default_multiple = safe_float(comp.get("EV/EBITDA")) or safe_float(row.get("EV / EBITDA")) or 15
         default_net_debt = safe_float(row.get("Net Debt")) or 0
+        default_wacc = safe_float(comp.get("WACC") or comp.get("Assumption WACC")) or 0.10
         default_shares = shares or 1
 
         if ticker == "MSFT" and msft_sheet:
@@ -1251,6 +1263,7 @@ def build_valuation_models(
             "ebitda_margin": default_margin,
             "exit_multiple": default_multiple,
             "net_debt": default_net_debt,
+            "wacc": default_wacc,
             "shares": default_shares,
         }
         models[ticker] = {
@@ -1266,6 +1279,7 @@ def build_valuation_models(
                 "ebitda_margin": {"min": 0.05, "max": 0.7, "step": 0.005},
                 "exit_multiple": {"min": 5, "max": 45, "step": 0.25},
                 "net_debt": {"min": net_debt_floor * 1.4, "max": net_debt_ceiling * 1.4, "step": 1000},
+                "wacc": {"min": 0.03, "max": 0.18, "step": 0.001},
                 "shares": {"min": default_shares * 0.5, "max": default_shares * 1.5, "step": 10},
             },
             "assumptions": {
@@ -1273,6 +1287,8 @@ def build_valuation_models(
                 "cost_of_debt": safe_float(comp.get("Cost of Debt")),
                 "cost_of_equity": safe_float(comp.get("Cost of Equity")),
                 "tax_rate": safe_float(comp.get("Tax Rate")),
+                "long_term_growth": 0.021,
+                "risk_free_rate": 0.0375,
                 "beta": safe_float(comp.get("Beta")),
                 "rf": safe_float(comp.get("Rf")),
                 "mrp": safe_float(comp.get("MRP")),
@@ -1291,11 +1307,40 @@ def calculate_valuation(
     ebitda_margin: float,
     exit_multiple: float,
     net_debt: float,
+    wacc: float,
     shares: float,
 ) -> dict[str, Any]:
-    forecast_revenue = base_revenue * (1 + revenue_growth)
-    forecast_ebitda = forecast_revenue * ebitda_margin
-    enterprise_value = forecast_ebitda * exit_multiple
+    projection = []
+    forecast_revenue = base_revenue
+    forecast_ebitda = 0.0
+    for year in range(1, 6):
+        forecast_revenue = base_revenue * ((1 + revenue_growth) ** year)
+        forecast_ebitda = forecast_revenue * ebitda_margin
+        discount_factor = (1 + wacc) ** year
+        projection.append(
+            {
+                "label": f"Year {year}",
+                "projected": forecast_ebitda,
+                "present_value": safe_div(forecast_ebitda, discount_factor),
+            }
+        )
+
+    discounted_ebitda = projection[0]["present_value"] if projection else None
+    terminal_enterprise_value = forecast_ebitda * exit_multiple
+    terminal_present_value = safe_div(terminal_enterprise_value, (1 + wacc) ** 5)
+    projection.append(
+        {
+            "label": "Terminal Value",
+            "projected": terminal_enterprise_value,
+            "present_value": terminal_present_value,
+        }
+    )
+
+    enterprise_value = sum(
+        value
+        for value in (safe_float(row.get("present_value")) for row in projection)
+        if value is not None
+    )
     equity_value = enterprise_value - net_debt
     implied_share_price = safe_div(equity_value, shares)
     upside_downside = None
@@ -1304,6 +1349,11 @@ def calculate_valuation(
     return {
         "forecast_revenue": forecast_revenue,
         "forecast_ebitda": forecast_ebitda,
+        "projected_ebitda": forecast_ebitda,
+        "discounted_ebitda": discounted_ebitda,
+        "terminal_value": terminal_enterprise_value,
+        "terminal_present_value": terminal_present_value,
+        "fcff_projection": projection,
         "enterprise_value": enterprise_value,
         "equity_value": equity_value,
         "implied_share_price": implied_share_price,
@@ -1501,11 +1551,8 @@ def build_pages(
     multiples = build_multiples(ratios)
     pages["valuation"] = {
         "multiples": multiples,
-        "multiple_charts": [
-            make_latest_bar(ratios, "P/E", "Latest P/E"),
-            make_latest_bar(ratios, "Price / Sales", "Latest Price / Sales"),
-            make_latest_bar(ratios, "EV / EBITDA", "Latest EV / EBITDA"),
-        ],
+        "multiple_medians": median_from_rows(multiples, ["revenue_growth", "ebitda_margin", "pe", "price_sales", "ev_ebitda"]),
+        "multiple_charts": [],
         "models": valuation_models,
         "initial_company": "MSFT" if "MSFT" in valuation_models else next(iter(valuation_models), None),
         "msft_valuation": msft_valuation,
@@ -1717,7 +1764,8 @@ def valuation_calculate():
             "revenue_growth": float(body.get("revenue_growth", defaults["revenue_growth"])),
             "ebitda_margin": float(body.get("ebitda_margin", defaults["ebitda_margin"])),
             "exit_multiple": float(body.get("exit_multiple", defaults["exit_multiple"])),
-            "net_debt": float(body.get("net_debt", defaults["net_debt"])),
+            "net_debt": defaults["net_debt"],
+            "wacc": float(body.get("wacc", defaults["wacc"])),
             "shares": float(body.get("shares", defaults["shares"])),
         }
     except (TypeError, ValueError):

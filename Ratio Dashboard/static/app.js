@@ -252,7 +252,7 @@
     (data.multiple_charts || []).forEach(renderBarChart);
     if (data.bridge_chart) renderGroupedBar(data.bridge_chart);
     if (data.rank_chart) renderGroupedBar(data.rank_chart);
-    renderMsftDcf();
+    renderModelFcffChart();
   }
 
   function resizeChartsIn(element) {
@@ -318,30 +318,35 @@
     });
   }
 
-  function renderMsftDcf() {
-    const canvas = document.getElementById("msft-dcf-chart");
-    if (!canvas || !data.msft_valuation || !data.msft_valuation.dcf) return;
-    const dcf = data.msft_valuation.dcf;
+  let modelFcffChart = null;
+
+  function modelFcffRows(outputs) {
+    return (outputs && outputs.fcff_projection) || [];
+  }
+
+  function renderModelFcffChart(outputs) {
+    const canvas = document.getElementById("model-fcff-chart");
+    if (!canvas) return;
     if (!window.Chart) return fallback(canvas);
-    const rows = {};
-    (dcf.rows || []).forEach((row) => { rows[row.label] = row.values; });
-    new Chart(canvas, {
+    const initialModel = data.models && data.initial_company ? data.models[data.initial_company] : null;
+    const rows = modelFcffRows(outputs || (initialModel && initialModel.outputs));
+    modelFcffChart = new Chart(canvas, {
       type: "bar",
       data: {
-        labels: dcf.headers || [],
+        labels: rows.map((row) => row.label),
         datasets: [
           {
-            label: "FCFF",
-            data: rows.FCFF || [],
+            label: "Projected",
+            data: rows.map((row) => row.projected),
             backgroundColor: "rgba(255,122,24,0.72)",
             borderColor: "#ff7a18",
             borderWidth: 1.4,
             borderRadius: 5
           },
           {
-            label: "PV",
-            data: rows.PV || [],
-            backgroundColor: "rgba(94,231,255,0.42)",
+            label: "Present value",
+            data: rows.map((row) => row.present_value),
+            backgroundColor: "rgba(94,231,255,0.48)",
             borderColor: "#5ee7ff",
             borderWidth: 1.4,
             borderRadius: 5
@@ -352,16 +357,24 @@
     });
   }
 
+  function updateModelFcffChart(outputs) {
+    const canvas = document.getElementById("model-fcff-chart");
+    if (!canvas || !window.Chart) return;
+    if (!modelFcffChart) {
+      renderModelFcffChart(outputs);
+      return;
+    }
+    const rows = modelFcffRows(outputs);
+    modelFcffChart.data.labels = rows.map((row) => row.label);
+    modelFcffChart.data.datasets[0].data = rows.map((row) => row.projected);
+    modelFcffChart.data.datasets[1].data = rows.map((row) => row.present_value);
+    modelFcffChart.update();
+  }
+
   const valuationControls = {
     revenue_growth: {
       slider: "revenueGrowthSlider",
       input: "revenueGrowthInput",
-      scale: 100,
-      outputType: "percent"
-    },
-    ebitda_margin: {
-      slider: "ebitdaMarginSlider",
-      input: "ebitdaMarginInput",
       scale: 100,
       outputType: "percent"
     },
@@ -371,17 +384,11 @@
       scale: 1,
       outputType: "multiple"
     },
-    net_debt: {
-      slider: "netDebtSlider",
-      input: "netDebtInput",
-      scale: 1,
-      outputType: "money_m"
-    },
-    shares: {
-      slider: "sharesSlider",
-      input: "sharesInput",
-      scale: 1,
-      outputType: "number"
+    wacc: {
+      slider: "waccSlider",
+      input: "waccInput",
+      scale: 100,
+      outputType: "percent"
     }
   };
 
@@ -442,10 +449,11 @@
     if (!container) return;
     const assumptions = model.assumptions || {};
     const items = [
-      ["WACC", assumptions.wacc, "percent"],
       ["Cost of debt", assumptions.cost_of_debt, "percent"],
       ["Cost of equity", assumptions.cost_of_equity, "percent"],
       ["Tax rate", assumptions.tax_rate, "percent"],
+      ["Long-term growth", assumptions.long_term_growth, "percent"],
+      ["Risk-free rate", assumptions.risk_free_rate, "percent"],
       ["Beta", assumptions.beta, "number"],
       ["Market equity", assumptions.market_equity, "money_m"]
     ];
@@ -465,10 +473,8 @@
     const payload = {
       ticker: select.value,
       revenue_growth: controlValue("revenue_growth"),
-      ebitda_margin: controlValue("ebitda_margin"),
       exit_multiple: controlValue("exit_multiple"),
-      net_debt: controlValue("net_debt"),
-      shares: controlValue("shares")
+      wacc: controlValue("wacc")
     };
     fetch("/api/valuation/calculate", {
       method: "POST",
@@ -484,6 +490,7 @@
         setText("enterpriseValue", format(outputs.enterprise_value, "money_m"));
         setText("equityValue", format(outputs.equity_value, "money_m"));
         setText("impliedPrice", format(outputs.implied_share_price, "price"));
+        updateModelFcffChart(outputs);
         const upside = document.getElementById("upsideDownside");
         if (upside) {
           upside.textContent = format(outputs.upside_downside, "percent");

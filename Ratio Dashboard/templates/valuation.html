@@ -1,6 +1,52 @@
 {% extends "base.html" %}
 
 {% block content %}
+<section class="valuation-table-card">
+  <div class="section-heading tight">
+    <p class="eyebrow">Valuation multiple comparison</p>
+    <h2>Growth, margin, and trading multiples</h2>
+  </div>
+  <div class="valuation-table-wrap">
+    <table class="valuation-table">
+      <thead>
+        <tr>
+          <th>Company</th>
+          <th>Revenue Growth</th>
+          <th>EBITDA Margin</th>
+          <th>P/E</th>
+          <th>P/S</th>
+          <th>EV / EBITDA</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in payload.multiples %}
+          <tr>
+            <td>
+              <span class="table-ticker">{{ row.display_ticker }}</span>
+              <span class="table-company">{{ row.company }}</span>
+            </td>
+            <td>{{ row.revenue_growth | pct }}</td>
+            <td>{{ row.ebitda_margin | pct }}</td>
+            <td>{{ row.pe | multiple }}</td>
+            <td>{{ row.price_sales | multiple }}</td>
+            <td>{{ row.ev_ebitda | multiple }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td><span class="table-ticker">Median</span></td>
+          <td>{{ payload.multiple_medians.revenue_growth | pct }}</td>
+          <td>{{ payload.multiple_medians.ebitda_margin | pct }}</td>
+          <td>{{ payload.multiple_medians.pe | multiple }}</td>
+          <td>{{ payload.multiple_medians.price_sales | multiple }}</td>
+          <td>{{ payload.multiple_medians.ev_ebitda | multiple }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
 <section class="story-grid">
   <article class="chart-card span-7 valuation-console">
     <div class="section-heading tight">
@@ -22,25 +68,15 @@
         <input id="revenueGrowthSlider" type="range">
         <input id="revenueGrowthInput" type="number">
       </div>
-      <div class="input-card" data-control="ebitda_margin" data-scale="100">
-        <label>EBITDA margin assumption</label>
-        <input id="ebitdaMarginSlider" type="range">
-        <input id="ebitdaMarginInput" type="number">
-      </div>
       <div class="input-card" data-control="exit_multiple" data-scale="1">
         <label>Exit EV/EBITDA multiple</label>
         <input id="exitMultipleSlider" type="range">
         <input id="exitMultipleInput" type="number">
       </div>
-      <div class="input-card" data-control="net_debt" data-scale="1">
-        <label>Net debt adjustment</label>
-        <input id="netDebtSlider" type="range">
-        <input id="netDebtInput" type="number">
-      </div>
-      <div class="input-card" data-control="shares" data-scale="1">
-        <label>Shares outstanding</label>
-        <input id="sharesSlider" type="range">
-        <input id="sharesInput" type="number">
+      <div class="input-card" data-control="wacc" data-scale="100">
+        <label>WACC assumption</label>
+        <input id="waccSlider" type="range">
+        <input id="waccInput" type="number">
       </div>
     </div>
 
@@ -62,9 +98,11 @@
         \[
         \text{Implied Share Price} =
         \frac{
-          \left(\text{Revenue} \times (1 + \text{Revenue Growth})\right)
-          \times \text{EBITDA Margin}
-          \times \text{Exit EV/EBITDA Multiple}
+          \frac{
+            \left(\text{Revenue} \times (1 + \text{Revenue Growth})\right)
+            \times \text{EBITDA Margin}
+            \times \text{Exit EV/EBITDA Multiple}
+          }{1 + \text{WACC}}
           - \text{Net Debt}
         }{
           \text{Shares Outstanding}
@@ -79,39 +117,13 @@
   </article>
 </section>
 
-<section class="chart-grid three">
-  {% for chart in payload.multiple_charts %}
-    <article class="chart-card">
-      <div class="section-heading tight">
-        <p class="eyebrow">Valuation multiple</p>
-        <h2>{{ chart.title }}</h2>
-      </div>
-      <div class="chart-frame short"><canvas id="{{ chart.id }}"></canvas></div>
-    </article>
-  {% endfor %}
-</section>
-
 <section class="story-grid">
-  <article class="chart-card span-7">
+  <article class="chart-card span-12">
     <div class="section-heading tight">
-      <p class="eyebrow">MSFT Valuation worksheet</p>
-      <h2>DCF cash flow and present value</h2>
+      <p class="eyebrow">Interactive model FCFF view</p>
+      <h2>5-Year Projection, Present Value, and Terminal Value</h2>
     </div>
-    <div class="chart-frame tall"><canvas id="msft-dcf-chart"></canvas></div>
-  </article>
-  <article class="workbook-card span-5">
-    <div class="section-heading tight">
-      <p class="eyebrow">Workbook output</p>
-      <h2>MSFT implied value bridge</h2>
-    </div>
-    <div class="metric-grid">
-      {% for label, value in payload.msft_valuation.outputs.items() %}
-        <div>
-          <span>{{ label }}</span>
-          <strong>{% if label == "Price" %}{{ value | price }}{% elif label == "Shares" %}{{ value | number }}{% else %}{{ value | money_m }}{% endif %}</strong>
-        </div>
-      {% endfor %}
-    </div>
+    <div class="chart-frame tall"><canvas id="model-fcff-chart"></canvas></div>
   </article>
 </section>
 {% endblock %}

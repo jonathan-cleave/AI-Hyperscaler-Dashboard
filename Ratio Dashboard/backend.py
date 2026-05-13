@@ -62,7 +62,7 @@ MULTIPLE_METRICS = {
 
 NAV_ITEMS = [
     {"key": "comparables", "label": "Comps Finder", "href": "/comparables"},
-    {"key": "home", "label": "Executive Story", "href": "/"},
+    {"key": "home", "label": "Broad Comparison", "href": "/"},
     {"key": "profitability", "label": "Profitability", "href": "/profitability"},
     {"key": "capital", "label": "Capital Intensity", "href": "/capital-intensity"},
     {"key": "leverage", "label": "Liquidity + Leverage", "href": "/leverage"},
@@ -73,7 +73,7 @@ NAV_ITEMS = [
 
 PAGE_META = {
     "home": {
-        "title": "AI Infrastructure Capital Burden",
+        "title": "Broad Company Comparison",
         "eyebrow": "Hyperscaler finance dashboard",
         "subtitle": "Who is capturing the gains, who is carrying the capital burden, and where is financial risk building?",
     },

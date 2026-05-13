@@ -152,7 +152,10 @@
         y: {
           ticks: {
             color: "#a7a19a",
+            stepSize: formatType === "rank" ? 1 : undefined,
+            precision: formatType === "rank" ? 0 : undefined,
             callback: function (value) {
+              if (formatType === "rank" && !Number.isInteger(Number(value))) return "";
               return format(Number(value), formatType);
             }
           },
@@ -244,6 +247,7 @@
   }
 
   let compsDistanceChart = null;
+  const COMPS_CACHE_KEY = "ratioDashboardCompsFinderLastResult";
 
   function renderAllCharts() {
     (data.charts || []).forEach(renderLineChart);
@@ -252,7 +256,7 @@
     (data.multiple_charts || []).forEach(renderBarChart);
     if (data.bridge_chart) renderGroupedBar(data.bridge_chart);
     if (data.rank_chart) renderGroupedBar(data.rank_chart);
-    renderModelFcffChart();
+    renderModelEbitdaChart();
   }
 
   function resizeChartsIn(element) {
@@ -318,57 +322,97 @@
     });
   }
 
-  let modelFcffChart = null;
+  let modelEbitdaYearsChart = null;
+  let modelTerminalValueChart = null;
 
-  function modelFcffRows(outputs) {
-    return (outputs && outputs.fcff_projection) || [];
+  function modelEbitdaRows(outputs) {
+    return (outputs && outputs.ebitda_projection) || [];
   }
 
-  function renderModelFcffChart(outputs) {
-    const canvas = document.getElementById("model-fcff-chart");
-    if (!canvas) return;
-    if (!window.Chart) return fallback(canvas);
-    const initialModel = data.models && data.initial_company ? data.models[data.initial_company] : null;
-    const rows = modelFcffRows(outputs || (initialModel && initialModel.outputs));
-    modelFcffChart = new Chart(canvas, {
-      type: "bar",
-      data: {
-        labels: rows.map((row) => row.label),
-        datasets: [
-          {
-            label: "Projected",
-            data: rows.map((row) => row.projected),
-            backgroundColor: "rgba(255,122,24,0.72)",
-            borderColor: "#ff7a18",
-            borderWidth: 1.4,
-            borderRadius: 5
-          },
-          {
-            label: "Present value",
-            data: rows.map((row) => row.present_value),
-            backgroundColor: "rgba(94,231,255,0.48)",
-            borderColor: "#5ee7ff",
-            borderWidth: 1.4,
-            borderRadius: 5
-          }
-        ]
+  function modelYearRows(outputs) {
+    return modelEbitdaRows(outputs).filter((row) => /^Year\s+\d+$/i.test(row.label || ""));
+  }
+
+  function modelTerminalRows(outputs) {
+    return modelEbitdaRows(outputs).filter((row) => /terminal/i.test(row.label || ""));
+  }
+
+  function ebitdaDatasets(rows) {
+    return [
+      {
+        label: "Projected",
+        data: rows.map((row) => row.projected),
+        backgroundColor: "rgba(255,122,24,0.72)",
+        borderColor: "#ff7a18",
+        borderWidth: 1.4,
+        borderRadius: 5
       },
-      options: commonOptions("money_m", "Higher is Better")
-    });
+      {
+        label: "Present value",
+        data: rows.map((row) => row.present_value),
+        backgroundColor: "rgba(94,231,255,0.48)",
+        borderColor: "#5ee7ff",
+        borderWidth: 1.4,
+        borderRadius: 5
+      }
+    ];
   }
 
-  function updateModelFcffChart(outputs) {
-    const canvas = document.getElementById("model-fcff-chart");
-    if (!canvas || !window.Chart) return;
-    if (!modelFcffChart) {
-      renderModelFcffChart(outputs);
+  function renderModelEbitdaChart(outputs) {
+    const yearCanvas = document.getElementById("model-ebitda-years-chart");
+    const terminalCanvas = document.getElementById("model-terminal-value-chart");
+    if (!yearCanvas && !terminalCanvas) return;
+    if (!window.Chart) {
+      fallback(yearCanvas);
+      fallback(terminalCanvas);
       return;
     }
-    const rows = modelFcffRows(outputs);
-    modelFcffChart.data.labels = rows.map((row) => row.label);
-    modelFcffChart.data.datasets[0].data = rows.map((row) => row.projected);
-    modelFcffChart.data.datasets[1].data = rows.map((row) => row.present_value);
-    modelFcffChart.update();
+    const initialModel = data.models && data.initial_company ? data.models[data.initial_company] : null;
+    const modelOutputs = outputs || (initialModel && initialModel.outputs);
+    const yearRows = modelYearRows(modelOutputs);
+    const terminalRows = modelTerminalRows(modelOutputs);
+
+    if (yearCanvas) {
+      modelEbitdaYearsChart = new Chart(yearCanvas, {
+        type: "bar",
+        data: {
+          labels: yearRows.map((row) => row.label),
+          datasets: ebitdaDatasets(yearRows)
+        },
+        options: commonOptions("money_m", "Higher is Better")
+      });
+    }
+
+    if (terminalCanvas) {
+      modelTerminalValueChart = new Chart(terminalCanvas, {
+        type: "bar",
+        data: {
+          labels: terminalRows.map((row) => row.label),
+          datasets: ebitdaDatasets(terminalRows)
+        },
+        options: commonOptions("money_m", "Higher is Better")
+      });
+    }
+  }
+
+  function updateEbitdaChart(chart, rows) {
+    if (!chart) return;
+    chart.data.labels = rows.map((row) => row.label);
+    chart.data.datasets[0].data = rows.map((row) => row.projected);
+    chart.data.datasets[1].data = rows.map((row) => row.present_value);
+    chart.update();
+  }
+
+  function updateModelEbitdaChart(outputs) {
+    const yearCanvas = document.getElementById("model-ebitda-years-chart");
+    const terminalCanvas = document.getElementById("model-terminal-value-chart");
+    if ((!yearCanvas && !terminalCanvas) || !window.Chart) return;
+    if ((yearCanvas && !modelEbitdaYearsChart) || (terminalCanvas && !modelTerminalValueChart)) {
+      renderModelEbitdaChart(outputs);
+      return;
+    }
+    updateEbitdaChart(modelEbitdaYearsChart, modelYearRows(outputs));
+    updateEbitdaChart(modelTerminalValueChart, modelTerminalRows(outputs));
   }
 
   const valuationControls = {
@@ -398,9 +442,38 @@
     const control = valuationControls[name];
     const input = document.getElementById(control.input);
     if (!input) return null;
-    const raw = Number(input.value);
+    const text = String(input.value || "").trim();
+    if (!text || text === "-" || text === "." || text === "-.") return null;
+    const raw = Number(text);
     if (!Number.isFinite(raw)) return null;
     return raw / control.scale;
+  }
+
+  function formatControlDisplay(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number.toFixed(2) : "";
+  }
+
+  function sanitizeDecimalText(value, allowNegative) {
+    let text = String(value || "").replace(",", ".");
+    let sign = "";
+    if (allowNegative && text.trim().startsWith("-")) {
+      sign = "-";
+    }
+    text = text.replace(/[^\d.]/g, "");
+
+    const dotIndex = text.indexOf(".");
+    if (dotIndex === -1) {
+      return `${sign}${text.slice(0, 2)}`;
+    }
+
+    const whole = text.slice(0, dotIndex).slice(0, 2);
+    const decimals = text.slice(dotIndex + 1).replace(/\./g, "").slice(0, 2);
+    return `${sign}${whole}.${decimals}`;
+  }
+
+  function completeDecimalText(value) {
+    return /^-?\d{1,2}(\.\d{0,2})?$/.test(String(value || ""));
   }
 
   function setControl(name, value, range) {
@@ -415,12 +488,14 @@
       max: range.max * scale,
       step: range.step * scale
     };
-    [slider, input].forEach((element) => {
-      element.min = scaledRange.min;
-      element.max = scaledRange.max;
-      element.step = scaledRange.step;
-      element.value = scaledValue.toFixed(control.outputType === "money_m" ? 0 : 2);
-    });
+    slider.min = scaledRange.min;
+    slider.max = scaledRange.max;
+    slider.step = scaledRange.step;
+    slider.value = formatControlDisplay(scaledValue);
+
+    input.dataset.min = scaledRange.min;
+    input.dataset.max = scaledRange.max;
+    input.value = formatControlDisplay(scaledValue);
   }
 
   function syncControl(name, source) {
@@ -428,10 +503,31 @@
     const slider = document.getElementById(control.slider);
     const input = document.getElementById(control.input);
     if (!slider || !input) return;
-    const value = source === "slider" ? slider.value : input.value;
-    slider.value = value;
-    input.value = value;
+    if (source === "slider") {
+      input.value = formatControlDisplay(slider.value);
+    } else {
+      const cleaned = sanitizeDecimalText(input.value, Number(slider.min) < 0);
+      if (input.value !== cleaned) input.value = cleaned;
+      if (!completeDecimalText(cleaned)) return;
+      slider.value = cleaned;
+    }
     scheduleValuation();
+  }
+
+  function finalizeControl(name) {
+    const control = valuationControls[name];
+    const slider = document.getElementById(control.slider);
+    const input = document.getElementById(control.input);
+    if (!slider || !input) return;
+    const cleaned = sanitizeDecimalText(input.value, Number(slider.min) < 0);
+    const raw = Number(cleaned);
+    if (!Number.isFinite(raw)) {
+      input.value = formatControlDisplay(slider.value);
+      return;
+    }
+    input.value = formatControlDisplay(raw);
+    slider.value = input.value;
+    scheduleValuation(0);
   }
 
   function loadCompanyModel(ticker) {
@@ -455,8 +551,7 @@
       ["TV growth", assumptions.long_term_growth, "percent"],
       ["LTGR", assumptions.ltgr, "percent"],
       ["Risk-free rate", assumptions.risk_free_rate, "percent"],
-      ["Beta", assumptions.beta, "number"],
-      ["Market equity", assumptions.market_equity, "money_m"]
+      ["Beta", assumptions.beta, "number"]
     ];
     container.innerHTML = items.map(([label, value, type]) => (
       `<div class="assumption-pill"><span>${label}</span><strong>${format(value, type)}</strong></div>`
@@ -492,11 +587,32 @@
         setText("equityValue", format(outputs.equity_value, "money_m"));
         setText("impliedPrice", format(outputs.implied_share_price, "price"));
         setText("actualSharePrice", format(outputs.current_price, "price"));
-        updateModelFcffChart(outputs);
+        updateValuationSignal(outputs);
+        updateModelEbitdaChart(outputs);
       })
       .catch((error) => {
         setText("impliedPrice", error.message || "n/a");
+        updateValuationSignal({});
       });
+  }
+
+  function updateValuationSignal(outputs) {
+    const impliedPrice = document.getElementById("impliedPrice");
+    const actualCard = document.getElementById("actualPriceCard");
+    const implied = outputs.implied_share_price;
+    const actual = outputs.current_price;
+    const hasSignal = isNumber(implied) && isNumber(actual);
+    const undervalued = hasSignal && implied >= actual;
+    const overvalued = hasSignal && implied < actual;
+
+    if (impliedPrice) {
+      impliedPrice.classList.toggle("positive", undervalued);
+      impliedPrice.classList.toggle("negative", overvalued);
+    }
+    if (actualCard) {
+      actualCard.classList.toggle("undervalued", undervalued);
+      actualCard.classList.toggle("overvalued", overvalued);
+    }
   }
 
   function setText(id, text) {
@@ -516,6 +632,12 @@
   function selectedCompareBy() {
     const selected = document.querySelector('input[name="compare_by"]:checked');
     return selected ? selected.value : "none";
+  }
+
+  function setCompareBy(value) {
+    document.querySelectorAll('input[name="compare_by"]').forEach((radio) => {
+      radio.checked = radio.value === value;
+    });
   }
 
   function setCompsStatus(message, type) {
@@ -600,6 +722,38 @@
     });
   }
 
+  function saveComparableSearch(result) {
+    if (!result || !window.sessionStorage) return;
+    try {
+      sessionStorage.setItem(COMPS_CACHE_KEY, JSON.stringify(result));
+    } catch (error) {
+      // Ignore storage failures; the live search result has already rendered.
+    }
+  }
+
+  function restoreComparableSearch() {
+    if (!window.sessionStorage) return;
+    let result = null;
+    try {
+      result = JSON.parse(sessionStorage.getItem(COMPS_CACHE_KEY) || "null");
+    } catch (error) {
+      sessionStorage.removeItem(COMPS_CACHE_KEY);
+      return;
+    }
+    if (!result || !Array.isArray(result.matches)) return;
+
+    const input = document.getElementById("compsTicker");
+    if (input && result.ticker) input.value = result.ticker;
+    if (result.compare_by) setCompareBy(result.compare_by);
+
+    renderCompsNameRanking(result);
+    renderCompsResults(result);
+    setCompsStatus(
+      `${result.matches.length} closest matches shown from the last distance search.`,
+      "ok"
+    );
+  }
+
   function runComparableSearch() {
     const input = document.getElementById("compsTicker");
     if (!input) return;
@@ -617,6 +771,7 @@
         if (!ok || body.error) throw new Error(body.error || "Comparable-company search failed.");
         renderCompsNameRanking(body);
         renderCompsResults(body);
+        saveComparableSearch(body);
         setCompsStatus(
           `${body.matches.length} closest matches found from ${body.universe_count.toLocaleString()} filtered firms.`,
           "ok"
@@ -635,10 +790,7 @@
       event.preventDefault();
       runComparableSearch();
     });
-    document.querySelectorAll('input[name="compare_by"]').forEach((radio) => {
-      radio.addEventListener("change", runComparableSearch);
-    });
-    runComparableSearch();
+    restoreComparableSearch();
   }
 
   function initValuation() {
@@ -652,6 +804,7 @@
       const input = document.getElementById(control.input);
       if (slider) slider.addEventListener("input", () => syncControl(name, "slider"));
       if (input) input.addEventListener("input", () => syncControl(name, "input"));
+      if (input) input.addEventListener("blur", () => finalizeControl(name));
     });
     loadCompanyModel(select.value);
   }

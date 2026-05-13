@@ -318,6 +318,8 @@ a {
 
 .span-5 { grid-column: span 5; }
 .span-7 { grid-column: span 7; }
+.span-8 { grid-column: span 8; }
+.span-4 { grid-column: span 4; }
 .span-12 { grid-column: span 12; }
 
 .story-panel,
@@ -1099,8 +1101,29 @@ select {
   accent-color: var(--orange);
 }
 
-.input-card input[type="number"] {
+.input-card input[type="number"],
+.input-card input[type="text"] {
   padding: 0 10px;
+}
+
+.unit-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.unit-input input[type="number"],
+.unit-input input[type="text"] {
+  padding-right: 34px;
+}
+
+.unit-input span {
+  position: absolute;
+  right: 12px;
+  color: var(--orange-2);
+  font-size: 0.86rem;
+  font-weight: 900;
+  pointer-events: none;
 }
 
 .valuation-output-grid {
@@ -1114,6 +1137,65 @@ select {
   border-color: rgba(255, 122, 24, 0.58);
   background: linear-gradient(180deg, rgba(255, 122, 24, 0.2), rgba(0, 0, 0, 0.18));
   box-shadow: var(--glow);
+}
+
+.valuation-output-grid .market-price {
+  position: relative;
+  border-color: rgba(255, 255, 255, 0.46);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(94, 231, 255, 0.055)),
+    rgba(0, 0, 0, 0.16);
+  box-shadow: 0 0 22px rgba(255, 255, 255, 0.1);
+}
+
+.valuation-output-grid .market-price::before {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 7px;
+  height: 7px;
+  content: "";
+  border-radius: 999px;
+  background: #fff8ef;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.72);
+}
+
+.valuation-output-grid .market-price small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 850;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.valuation-output-grid .market-price.undervalued {
+  border-color: rgba(125, 227, 141, 0.6);
+  box-shadow: 0 0 24px rgba(125, 227, 141, 0.16);
+}
+
+.valuation-output-grid .market-price.undervalued small {
+  color: var(--green);
+}
+
+.valuation-output-grid .market-price.undervalued::before {
+  background: var(--green);
+  box-shadow: 0 0 16px rgba(125, 227, 141, 0.75);
+}
+
+.valuation-output-grid .market-price.overvalued {
+  border-color: rgba(255, 107, 107, 0.58);
+  box-shadow: 0 0 24px rgba(255, 107, 107, 0.14);
+}
+
+.valuation-output-grid .market-price.overvalued small {
+  color: #ffb0b0;
+}
+
+.valuation-output-grid .market-price.overvalued::before {
+  background: var(--red);
+  box-shadow: 0 0 16px rgba(255, 107, 107, 0.76);
 }
 
 .valuation-output-grid .positive {
@@ -1199,7 +1281,7 @@ select {
 }
 
 .valuation-table tfoot td {
-  border-top: 1px solid rgba(255, 122, 24, 0.32);
+  border-top: 2px solid rgba(255, 255, 255, 0.72);
   border-bottom: 0;
   background: rgba(255, 122, 24, 0.08);
   color: #fff7ee;
@@ -1640,6 +1722,8 @@ select {
 
   .span-5,
   .span-7,
+  .span-8,
+  .span-4,
   .span-12 {
     grid-column: auto;
   }

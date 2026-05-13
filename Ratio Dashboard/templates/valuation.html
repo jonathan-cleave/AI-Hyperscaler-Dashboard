@@ -66,27 +66,39 @@
       <div class="input-card" data-control="revenue_growth" data-scale="100">
         <label>Year 1 revenue growth assumption</label>
         <input id="revenueGrowthSlider" type="range">
-        <input id="revenueGrowthInput" type="number">
+        <div class="unit-input percent-input">
+          <input id="revenueGrowthInput" type="text" inputmode="decimal" autocomplete="off">
+          <span>%</span>
+        </div>
       </div>
       <div class="input-card" data-control="exit_multiple" data-scale="1">
         <label>Exit EV/EBITDA multiple</label>
         <input id="exitMultipleSlider" type="range">
-        <input id="exitMultipleInput" type="number">
+        <div class="unit-input multiple-input">
+          <input id="exitMultipleInput" type="text" inputmode="decimal" autocomplete="off">
+          <span>x</span>
+        </div>
       </div>
       <div class="input-card" data-control="wacc" data-scale="100">
         <label>WACC assumption</label>
         <input id="waccSlider" type="range">
-        <input id="waccInput" type="number">
+        <div class="unit-input percent-input">
+          <input id="waccInput" type="text" inputmode="decimal" autocomplete="off">
+          <span>%</span>
+        </div>
       </div>
     </div>
 
     <div class="valuation-output-grid">
-      <div><span>Year 5 forecast revenue</span><strong id="forecastRevenue"></strong></div>
+      <div><span>5 Year forecasted revenue</span><strong id="forecastRevenue"></strong></div>
       <div><span>Forecast EBITDA</span><strong id="forecastEbitda"></strong></div>
       <div><span>Enterprise value</span><strong id="enterpriseValue"></strong></div>
       <div><span>Equity value</span><strong id="equityValue"></strong></div>
       <div class="final-price"><span>Implied share price</span><strong id="impliedPrice"></strong></div>
-      <div><span>Actual share price</span><strong id="actualSharePrice"></strong></div>
+      <div id="actualPriceCard" class="market-price">
+        <span>Actual share price</span>
+        <strong id="actualSharePrice"></strong>
+      </div>
     </div>
   </article>
 
@@ -118,12 +130,20 @@
 </section>
 
 <section class="story-grid">
-  <article class="chart-card span-12">
+  <article class="chart-card span-8">
     <div class="section-heading tight">
-      <p class="eyebrow">Interactive model FCFF view</p>
-      <h2>5-Year Projection, Present Value, and Terminal Value</h2>
+      <p class="eyebrow">Interactive model EBITDA view</p>
+      <h2>Year 1-5 Projection and Present Value</h2>
     </div>
-    <div class="chart-frame tall"><canvas id="model-fcff-chart"></canvas></div>
+    <div class="chart-frame tall"><canvas id="model-ebitda-years-chart"></canvas></div>
+  </article>
+
+  <article class="chart-card span-4 terminal-value-card">
+    <div class="section-heading tight">
+      <p class="eyebrow">Terminal value</p>
+      <h2>Isolated Terminal Value</h2>
+    </div>
+    <div class="chart-frame tall"><canvas id="model-terminal-value-chart"></canvas></div>
   </article>
 </section>
 {% endblock %}

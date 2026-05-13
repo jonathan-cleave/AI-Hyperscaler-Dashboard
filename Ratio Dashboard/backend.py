@@ -99,7 +99,7 @@ PAGE_META = {
     "capital": {
         "title": "Capital Intensity",
         "eyebrow": "Data center load",
-        "subtitle": "Tracks how companies prefer to pay for datacenters through direct purchases or operating leases.",
+        "subtitle": "Tracks how companies prefer to pay for datacenters either through direct purchases or operating leases.",
     },
     "leverage": {
         "title": "Liquidity and Leverage",
@@ -114,11 +114,11 @@ PAGE_META = {
     "valuation": {
         "title": "Valuation and Implied Price",
         "eyebrow": "Comps plus workbook model",
-        "subtitle": "Combines comparable-company assumptions from Comps with the MSFT Valuation worksheet and an interactive EV/EBITDA model.",
+        "subtitle": "Combines comparable-company assumptions from Comps with valuation techniques to create an interactive EV/EBITDA model.",
     },
     "comparables": {
         "title": "Comparable Company Finder",
-        "eyebrow": "Distance-to pipeline",
+        "eyebrow": "Closest Distance Company",
         "subtitle": "Input any ticker and rank the top four comparable companies using the numeric distance pipeline from comps.ipynb.",
     },
     "insights": {
@@ -1287,11 +1287,11 @@ def build_valuation_models(
             "current_price": current_price,
             "inputs": inputs,
             "ranges": {
-                "revenue_growth": {"min": -0.1, "max": 0.35, "step": 0.005},
+                "revenue_growth": {"min": -0.1, "max": 0.35, "step": 0.0001},
                 "ebitda_margin": {"min": 0.05, "max": 0.7, "step": 0.005},
-                "exit_multiple": {"min": 5, "max": 45, "step": 0.25},
+                "exit_multiple": {"min": 5, "max": 45, "step": 0.01},
                 "net_debt": {"min": net_debt_floor * 1.4, "max": net_debt_ceiling * 1.4, "step": 1000},
-                "wacc": {"min": 0.03, "max": 0.18, "step": 0.001},
+                "wacc": {"min": 0.03, "max": 0.18, "step": 0.0001},
                 "shares": {"min": default_shares * 0.5, "max": default_shares * 1.5, "step": 10},
             },
             "assumptions": {
@@ -1381,7 +1381,7 @@ def calculate_valuation(
         "discounted_ebitda": discounted_ebitda,
         "terminal_value": terminal_enterprise_value,
         "terminal_present_value": terminal_present_value,
-        "fcff_projection": projection,
+        "ebitda_projection": projection,
         "enterprise_value": enterprise_value,
         "equity_value": equity_value,
         "implied_share_price": implied_share_price,
@@ -1583,7 +1583,6 @@ def build_pages(
         "multiple_charts": [],
         "models": valuation_models,
         "initial_company": "MSFT" if "MSFT" in valuation_models else next(iter(valuation_models), None),
-        "msft_valuation": msft_valuation,
         "formula": "Implied Share Price = (sum(PV EBITDA years 1-5) + PV Terminal Value - Net Debt) / Shares Outstanding",
     }
 

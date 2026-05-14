@@ -1,6 +1,6 @@
-Flask
+flask
+gunicorn
 pandas
-numpy
 openpyxl
 pyarrow
-gunicorn
+numpy

@@ -162,7 +162,7 @@ EDITABLE_TEXT_BOXES = {
             },
             {
                 "title": "Leases",
-                "body": "Amazon prioritizes flexibility through operating leases of $89.3B, Microsoft emphasizes control via finance leases at $46.2B, while Meta is rapidly trying to catch up with direct cash investments through CapEx.",
+                "body": "Amazon prioritizes flexibility with $89.3B of operating leases, Microsoft emphasizes control with $46.2B of finance leases, and Meta is catching up through direct CapEx investment.",
             },
         ],
     },

@@ -1971,6 +1971,5 @@ def choose_port(start: int = 5000, attempts: int = 20) -> int:
 
 
 if __name__ == "__main__":
-    port = int(os.environ["PORT"]) if os.environ.get("PORT") else choose_port()
-    print(f"Dashboard running at http://127.0.0.1:{port}", flush=True)
-    app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)

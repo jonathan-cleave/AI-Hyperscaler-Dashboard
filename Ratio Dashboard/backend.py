@@ -128,6 +128,91 @@ PAGE_META = {
     },
 }
 
+# Edit this section when you want to change narrative text boxes/cards only.
+# It is organized by page name so you can quickly find the box you are editing.
+EDITABLE_TEXT_BOXES = {
+    "intro": {},
+    "comparables": {},
+    "home": {},
+    "profitability": {
+        "insight_boxes": [
+            {
+                "title": "Operating Margin",
+                "body": "AWS business is diluted by lower-margin retail, fulfillment, and logistics operations, making its overall profitability less reflective of its AI infrastructure strength.",
+            },
+            {
+                "title": "Net Profit Margin",
+                "body": "MSFT’s 36.1% net margin indicates that AI-related infrastructure expansion is translating into scalable bottom-line profitability rather than being overwhelmed by capital costs.",
+            },
+            {
+                "title": "Return on Assets and Equity",
+                "body": "GOOGL leads both ROA 22.2% and ROE 31.8%, indicating the strongest ability to generate earnings from its growing AI infrastructure asset base while efficiently converting shareholder capital into returns.",
+            },
+        ],
+    },
+    "capital": {
+        "insight_boxes": [
+            {
+                "title": "CapEx / Revenue",
+                "body": "META leads on CapEx / Revenue at 34.7%, while AMZN is the main contrast point. A high ratio indicates that more revenue is being recycled into AI and data center capacity.",
+            },
+            {
+                "title": "PPE / Assets",
+                "body": "AMZN leads on PPE / Assets at 75.8%. The increasing trend shows that hyperscalers are no longer asset-light tech companies but are transitioning to capital-intensive infrastructure providers.",
+            },
+            {
+                "title": "Leases",
+                "body": "Amazon prioritizes flexibility through operating leases of 89.3B, Microsoft emphasizes control via finance leases at 46.2B, while Meta is rapidly trying to catch up with direct cash investments through CapEx.",
+            },
+        ],
+    },
+    "leverage": {
+        "insight_boxes": [
+            {
+                "title": "Current Ratio",
+                "body": "META leads Current Ratio at 2.6x, indicating the strongest short-term liquidity cushion to fund rising AI and data center investment internally, but overall trends point downard as they put more cash into expanding infastructure.",
+            },
+            {
+                "title": "Debt / Equity",
+                "body": "Because of its high Current Ratio, META is able to take on more debt to fund its expansion having the highest D/E ratio of 0.3x, while MSFT and AMZN have begun cutting back on using leverage.",
+            },
+            {
+                "title": "Interest Coverage",
+                "body": "GOOGL has the highest Interest Coverage at 175.3x, but has recently issued $37 million in corporate bonds which has increased its interest expense and lowered its coverage ratio by 58% in 1 year.",
+            },
+        ],
+    },
+    "cash_flow": {
+        "insight_boxes": [
+            {
+                "title": "Op Cash / Revenue",
+                "body": "META has a Operating Cash Flow / Revenue of 57.6%, showing the strongest ability to internally fund AI and data center expansion, which it is using to its advantage in addition to debt",
+            },
+            {
+                "title": "FCF Margin",
+                "body": "MSFT’s 25.4% Free Cash Flow Margin demonstrates superior conversion of AI-driven revenue growth into residual cash flow, even after absorbing substantial infrastructure and data center investment.",
+            },
+        ],
+    },
+    "valuation": {},
+    "insights": {
+        "conclusion_cards": [
+            {
+                "question": "Who is capturing the gains?",
+                "answer": "MSFT is capturing the gains most effectively, showing the strongest profitability conversion across the hyperscalers. Microsoft leads Operating Margin at 45.6% and Free Cash Flow Margin at 25.4%. Its Azure services are translating into scalable earnings and their strategy is to purcahse and own datacenters directly.",
+            },
+            {
+                "question": "Who is carrying the capital burden?",
+                "answer": "META is carrying the heaviest direct capital burden, with CapEx/Revenue reaching nearly 35% and PPE/Assets rising sharply over the last several years. This suggests Meta is aggressively funding AI and data center expansion to catch up to others and shift away from its Virtual Reality investments.",
+            },
+            {
+                "question": "Where is financial risk building?",
+                "answer": "AMZN screens as the clearest relative financial-risk case. It has the weakest operating margins, the lowest free cash flow margins, and the largest operating lease obligations among the group, indicating that AI and logistics expansion are placing heavier pressure on cash generation and long-term commitments.",
+            },
+        ],
+    },
+}
+
 
 class DashboardDataError(RuntimeError):
     """Raised when the workbook cannot support a requested dashboard view."""
@@ -1043,51 +1128,6 @@ def capital_burden_chain(latest: pd.DataFrame) -> list[dict[str, Any]]:
     return chain
 
 
-def home_takeaways(latest: pd.DataFrame) -> list[str]:
-    if latest.empty:
-        return []
-    margin_leader = leader(latest, "Operating Margin", True)
-    cash_leader = leader(latest, "FCF Margin", True)
-    capex_leader = leader(latest, "CapEx / Revenue", True)
-    liquidity_leader = leader(latest, "Current Ratio", True)
-    value_low = leader(latest, "EV / EBITDA", False)
-    takeaways = []
-    if margin_leader is not None:
-        takeaways.append(
-            f"{margin_leader['Display Ticker']} is converting demand into operating profit most efficiently at {fmt_pct(margin_leader['Operating Margin'])} operating margin."
-        )
-    if capex_leader is not None:
-        takeaways.append(
-            f"{capex_leader['Display Ticker']} carries the heaviest current infrastructure burden with capex at {fmt_pct(capex_leader['CapEx / Revenue'])} of revenue."
-        )
-    if cash_leader is not None:
-        takeaways.append(
-            f"{cash_leader['Display Ticker']} has the strongest latest free-cash-flow margin at {fmt_pct(cash_leader['FCF Margin'])}, giving it more room to self-fund AI buildout."
-        )
-    if liquidity_leader is not None:
-        takeaways.append(
-            f"{liquidity_leader['Display Ticker']} has the most visible liquidity cushion with a {fmt_x(liquidity_leader['Current Ratio'])} current ratio."
-        )
-    if value_low is not None:
-        takeaways.append(
-            f"{value_low['Display Ticker']} screens at the lowest EV/EBITDA multiple in the workbook comps at {fmt_x(value_low['EV / EBITDA'])}."
-        )
-    return takeaways
-
-
-def metric_commentary(latest: pd.DataFrame, metric: str, high_good: bool, context: str) -> dict[str, Any]:
-    best = leader(latest, metric, high_good)
-    opposite = leader(latest, metric, not high_good)
-    if best is None:
-        return {"title": metric, "body": f"{metric} is not available in the workbook."}
-    body = f"{best['Display Ticker']} leads on {metric} at "
-    body += fmt_pct(best[metric]) if metric in PERCENT_METRICS else fmt_x(best[metric])
-    if opposite is not None and opposite["Ticker"] != best["Ticker"]:
-        body += f", while {opposite['Display Ticker']} is the main contrast point."
-    body += f" {context}"
-    return {"title": metric, "body": body}
-
-
 def risk_heatmap(df: pd.DataFrame) -> dict[str, Any]:
     metrics = ["Current Ratio", "Debt / Equity", "Interest Coverage"]
     if df.empty or not set(metrics).issubset(df.columns):
@@ -1459,32 +1499,7 @@ def ranking_payload(ratios: pd.DataFrame) -> dict[str, Any]:
             }
         )
 
-    profit_leader = rankings[0]["items"][0] if rankings and rankings[0]["items"] else None
-    burden_leader = rankings[1]["items"][0] if len(rankings) > 1 and rankings[1]["items"] else None
-    risk_leader = rankings[2]["items"][0] if len(rankings) > 2 and rankings[2]["items"] else None
-
-    conclusions = []
-    if profit_leader:
-        conclusions.append(
-            {
-                "question": "Who is capturing the gains?",
-                "answer": f"{profit_leader['display_ticker']} ranks first on profitability conversion, making it the clearest current beneficiary of AI and cloud demand.",
-            }
-        )
-    if burden_leader:
-        conclusions.append(
-            {
-                "question": "Who is carrying the capital burden?",
-                "answer": f"{burden_leader['display_ticker']} ranks as the heaviest capital-intensity case, with infrastructure spending absorbing more of the growth story.",
-            }
-        )
-    if risk_leader:
-        conclusions.append(
-            {
-                "question": "Where is financial risk building?",
-                "answer": f"{risk_leader['display_ticker']} screens as the highest relative leverage-risk case, though the group remains far from a distressed balance-sheet profile.",
-            }
-        )
+    conclusions = EDITABLE_TEXT_BOXES["insights"]["conclusion_cards"]
 
     rank_chart = {
         "id": "final-rank-chart",
@@ -1520,7 +1535,6 @@ def build_pages(
     pages["home"] = {
         "story_window": f"{int(ratios['Year'].min())}-{int(ratios['Year'].max())}",
         "cards": company_cards(latest, comps),
-        "takeaways": home_takeaways(latest),
         "charts": [
             make_line_chart(ratios, "Revenue Growth", "Revenue Growth Trend"),
         ],
@@ -1530,12 +1544,7 @@ def build_pages(
     pages["profitability"] = {
         "line_charts": [make_line_chart(ratios, metric) for metric in profitability_metrics],
         "bar_charts": [],
-        "commentary": [
-            metric_commentary(latest, "Operating Margin", True, "This is the cleanest view of core operating conversion."),
-            metric_commentary(latest, "Net Profit Margin", True, "Net margin captures tax, interest, and below-the-line drag."),
-            metric_commentary(latest, "ROA", True, "ROA matters because AI infrastructure increases the asset base."),
-            metric_commentary(latest, "ROE", True, "ROE shows how strongly the equity base is being monetized."),
-        ],
+        "commentary": EDITABLE_TEXT_BOXES["profitability"]["insight_boxes"],
     }
 
     capital_metrics = ["CapEx / Revenue", "PPE / Assets", "Operating Leases", "Finance Leases"]
@@ -1543,23 +1552,7 @@ def build_pages(
         "line_charts": [make_line_chart(ratios, metric) for metric in capital_metrics],
         "bar_charts": [],
         "server_cards": capital_burden_chain(latest),
-        "commentary": [
-            metric_commentary(latest, "CapEx / Revenue", True, "A high ratio indicates that more revenue is being recycled into AI and data center capacity."),
-            {
-                "title": "PPE / Assets",
-                "body": (
-                    f"{leader(latest, 'PPE / Assets', True)['Display Ticker']} leads on PPE / Assets at "
-                    f"{fmt_pct(leader(latest, 'PPE / Assets', True)['PPE / Assets'])}. "
-                    "The increasing trend shows that hyperscalers are no longer asset-light tech companies but are transitioning to capital-intensive infrastructure providers."
-                )
-                if leader(latest, "PPE / Assets", True) is not None
-                else "PPE / Assets is not available in the workbook.",
-            },
-            {
-                "title": "Leases",
-                "body": "Amazon prioritizes flexibility through operating leases of 89.3B, Microsoft emphasizes control via finance leases at 46.2B, while Meta is rapidly trying to catch up with direct cash investments through CapEx.",
-            },
-        ],
+        "commentary": EDITABLE_TEXT_BOXES["capital"]["insight_boxes"],
     }
 
     leverage_metrics = ["Current Ratio", "Debt / Equity", "Interest Coverage"]
@@ -1567,11 +1560,7 @@ def build_pages(
         "line_charts": [make_line_chart(ratios, metric) for metric in leverage_metrics],
         "bar_charts": [make_latest_bar(ratios, "Debt / Equity", "Latest Debt / Equity")],
         "heatmap": risk_heatmap(ratios),
-        "commentary": [
-            metric_commentary(latest, "Current Ratio", True, "Liquidity cushion matters if AI capex remains elevated."),
-            metric_commentary(latest, "Debt / Equity", False, "Lower debt intensity preserves optionality during investment cycles."),
-            metric_commentary(latest, "Interest Coverage", True, "Coverage shows whether earnings power comfortably absorbs financing costs."),
-        ],
+        "commentary": EDITABLE_TEXT_BOXES["leverage"]["insight_boxes"],
     }
 
     pages["cash_flow"] = {
@@ -1581,10 +1570,7 @@ def build_pages(
         ],
         "bar_charts": [make_latest_bar(ratios, "FCF Margin", "Latest Free Cash Flow Margin")],
         "bridge_chart": build_bridge_chart(latest),
-        "commentary": [
-            metric_commentary(latest, "Op Cash / Revenue", True, "This is the source of internal funding capacity."),
-            metric_commentary(latest, "FCF Margin", True, "Free cash flow margin is the residual after capex pressure hits."),
-        ],
+        "commentary": EDITABLE_TEXT_BOXES["cash_flow"]["insight_boxes"],
     }
 
     valuation_models = build_valuation_models(ratios, balance, comps, msft_valuation)

@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 .flask.pid
 flask*.log
+server_test*.log

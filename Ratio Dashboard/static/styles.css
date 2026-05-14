@@ -1156,18 +1156,6 @@ select {
   box-shadow: 0 0 22px rgba(255, 255, 255, 0.1);
 }
 
-.valuation-output-grid .market-price::before {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 7px;
-  height: 7px;
-  content: "";
-  border-radius: 999px;
-  background: #fff8ef;
-  box-shadow: 0 0 14px rgba(255, 255, 255, 0.72);
-}
-
 .valuation-output-grid .market-price small {
   display: block;
   margin-top: 5px;
@@ -1187,11 +1175,6 @@ select {
   color: var(--green);
 }
 
-.valuation-output-grid .market-price.undervalued::before {
-  background: var(--green);
-  box-shadow: 0 0 16px rgba(125, 227, 141, 0.75);
-}
-
 .valuation-output-grid .market-price.overvalued {
   border-color: rgba(255, 107, 107, 0.58);
   box-shadow: 0 0 24px rgba(255, 107, 107, 0.14);
@@ -1199,11 +1182,6 @@ select {
 
 .valuation-output-grid .market-price.overvalued small {
   color: #ffb0b0;
-}
-
-.valuation-output-grid .market-price.overvalued::before {
-  background: var(--red);
-  box-shadow: 0 0 16px rgba(255, 107, 107, 0.76);
 }
 
 .valuation-output-grid .positive {

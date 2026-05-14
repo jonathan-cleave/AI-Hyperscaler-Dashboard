@@ -138,7 +138,7 @@ EDITABLE_TEXT_BOXES = {
         "insight_boxes": [
             {
                 "title": "Operating Margin",
-                "body": "AWS business is diluted by lower-margin retail, fulfillment, and logistics operations, making its overall profitability less reflective of its AI infrastructure strength.",
+                "body": "AWS business is diluted by lower-margin retail, fulfillment, and logistics operations, making its operating margin of 11.2% less reflective of its AI infrastructure strength.",
             },
             {
                 "title": "Net Profit Margin",
@@ -154,7 +154,7 @@ EDITABLE_TEXT_BOXES = {
         "insight_boxes": [
             {
                 "title": "CapEx / Revenue",
-                "body": "META leads on CapEx / Revenue at 34.7%, while AMZN is the main contrast point. A high ratio indicates that more revenue is being recycled into AI and data center capacity.",
+                "body": "META leads on CapEx / Revenue at 34.7%, investing a significant portion of its sales revenue into purchasing or upgrading physical assets like GPU's, data centers, or power storage.",
             },
             {
                 "title": "PPE / Assets",
@@ -162,7 +162,7 @@ EDITABLE_TEXT_BOXES = {
             },
             {
                 "title": "Leases",
-                "body": "Amazon prioritizes flexibility through operating leases of 89.3B, Microsoft emphasizes control via finance leases at 46.2B, while Meta is rapidly trying to catch up with direct cash investments through CapEx.",
+                "body": "Amazon prioritizes flexibility through operating leases of $89.3B, Microsoft emphasizes control via finance leases at $46.2B, while Meta is rapidly trying to catch up with direct cash investments through CapEx.",
             },
         ],
     },
@@ -170,7 +170,7 @@ EDITABLE_TEXT_BOXES = {
         "insight_boxes": [
             {
                 "title": "Current Ratio",
-                "body": "META leads Current Ratio at 2.6x, indicating the strongest short-term liquidity cushion to fund rising AI and data center investment internally, but overall trends point downard as they put more cash into expanding infastructure.",
+                "body": "META leads Current Ratio at 2.6x, indicating the strongest short-term liquidity cushion to fund rising AI and data center investment internally, but overall trends point downard as companies put more cash into expanding infastructure.",
             },
             {
                 "title": "Debt / Equity",
@@ -178,7 +178,7 @@ EDITABLE_TEXT_BOXES = {
             },
             {
                 "title": "Interest Coverage",
-                "body": "GOOGL has the highest Interest Coverage at 175.3x, but has recently issued $37 million in corporate bonds which has increased its interest expense and lowered its coverage ratio by 58% in 1 year.",
+                "body": "GOOGL has the highest Interest Coverage at 175.3x, but has recently issued $37 million in corporate bonds which has increased its interest expense and lowered its coverage ratio by 58% from 2024-2025.",
             },
         ],
     },
@@ -186,7 +186,7 @@ EDITABLE_TEXT_BOXES = {
         "insight_boxes": [
             {
                 "title": "Op Cash / Revenue",
-                "body": "META has a Operating Cash Flow / Revenue of 57.6%, showing the strongest ability to internally fund AI and data center expansion, which it is using to its advantage in addition to debt",
+                "body": "META has a Operating Cash Flow / Revenue of 57.6%, showing the strongest ability to internally fund AI and data center expansion, which it is using to its advantage in addition to debt.",
             },
             {
                 "title": "FCF Margin",

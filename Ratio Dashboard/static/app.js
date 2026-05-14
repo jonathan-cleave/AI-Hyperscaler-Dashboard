@@ -35,6 +35,7 @@
     if (type === "money_usd") return moneyUsd(value);
     if (type === "price") return `$${value.toFixed(2)}`;
     if (type === "rank") return `${value.toFixed(0)}`;
+    if (type === "zscore") return `${value >= 0 ? "+" : ""}${value.toFixed(2)}`;
     return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
   }
 
@@ -70,11 +71,14 @@
     });
   }
 
-  function commonOptions(formatType, directionText) {
+  function commonOptions(formatType, directionText, indexAxis) {
+    const horizontal = indexAxis === "y";
+    const valueAxis = horizontal ? "x" : "y";
     return {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
+      indexAxis: horizontal ? "y" : "x",
+      interaction: { mode: "index", axis: horizontal ? "y" : "x", intersect: false },
       plugins: {
         subtitle: {
           display: Boolean(directionText),
@@ -117,8 +121,8 @@
           titleColor: "#fff4e7",
           bodyColor: "#e4ddd6",
           itemSort: function (a, b) {
-            const aValue = Number(a.parsed && a.parsed.y);
-            const bValue = Number(b.parsed && b.parsed.y);
+            const aValue = Number(a.parsed && a.parsed[valueAxis]);
+            const bValue = Number(b.parsed && b.parsed[valueAxis]);
             if (!Number.isFinite(aValue) && !Number.isFinite(bValue)) return 0;
             if (!Number.isFinite(aValue)) return 1;
             if (!Number.isFinite(bValue)) return -1;
@@ -126,7 +130,7 @@
           },
           callbacks: {
             label: function (context) {
-              return `${context.dataset.label}: ${format(context.parsed.y, formatType)}`;
+              return `${context.dataset.label}: ${format(Number(context.parsed[valueAxis]), formatType)}`;
             }
           }
         }
@@ -135,9 +139,15 @@
         x: {
           ticks: {
             color: "#a7a19a",
+            stepSize: horizontal && formatType === "rank" ? 1 : undefined,
+            precision: horizontal && formatType === "rank" ? 0 : undefined,
             maxRotation: 0,
             autoSkip: false,
             callback: function (value, index) {
+              if (horizontal) {
+                if (formatType === "rank" && !Number.isInteger(Number(value))) return "";
+                return format(Number(value), formatType);
+              }
               const labels = this.chart.data.labels || [];
               const label = labels[index];
               const year = Number(label);
@@ -152,9 +162,13 @@
         y: {
           ticks: {
             color: "#a7a19a",
-            stepSize: formatType === "rank" ? 1 : undefined,
-            precision: formatType === "rank" ? 0 : undefined,
-            callback: function (value) {
+            stepSize: !horizontal && formatType === "rank" ? 1 : undefined,
+            precision: !horizontal && formatType === "rank" ? 0 : undefined,
+            callback: function (value, index) {
+              if (horizontal) {
+                const labels = this.chart.data.labels || [];
+                return labels[index] || value;
+              }
               if (formatType === "rank" && !Number.isInteger(Number(value))) return "";
               return format(Number(value), formatType);
             }
@@ -188,7 +202,7 @@
           };
         })
       },
-      options: commonOptions(chart.format, chart.direction)
+      options: commonOptions(chart.format, chart.direction, chart.index_axis)
     });
   }
 
@@ -209,7 +223,7 @@
           borderRadius: 6
         }]
       },
-      options: commonOptions(chart.format, chart.direction)
+      options: commonOptions(chart.format, chart.direction, chart.index_axis)
     });
   }
 
@@ -242,7 +256,298 @@
           };
         })
       },
-      options: commonOptions(chart.format, chart.direction)
+      options: commonOptions(chart.format, chart.direction, chart.index_axis)
+    });
+  }
+
+  function renderRadarChart(chart) {
+    const canvas = document.getElementById(chart.id);
+    if (!canvas) return;
+    if (!window.Chart) return fallback(canvas);
+    const rankMin = isNumber(chart.min) ? chart.min : 1;
+    const rankMax = isNumber(chart.max) ? chart.max : 4;
+    new Chart(canvas, {
+      type: "radar",
+      data: {
+        labels: chart.labels || [],
+        datasets: (chart.datasets || []).map((dataset, index) => {
+          const datasetColor = colorForLabel(dataset.label, colors[index % colors.length]);
+          return {
+            label: dataset.label,
+            data: dataset.values || [],
+            borderColor: datasetColor,
+            backgroundColor: `${datasetColor}30`,
+            pointBackgroundColor: datasetColor,
+            pointBorderColor: "#0b0b0c",
+            pointHoverBackgroundColor: "#fff4e7",
+            pointHoverBorderColor: datasetColor,
+            borderWidth: 2.2,
+            pointRadius: 3.2,
+            pointHoverRadius: 5,
+            fill: true,
+            spanGaps: true
+          };
+        })
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          subtitle: {
+            display: Boolean(chart.direction),
+            text: chart.direction || "",
+            color: "#9a9690",
+            font: { size: 12, weight: "700" },
+            padding: { top: 0, bottom: 4 }
+          },
+          legend: {
+            labels: {
+              color: "#d9d1c9",
+              boxWidth: 10,
+              boxHeight: 10,
+              usePointStyle: true
+            }
+          },
+          tooltip: {
+            backgroundColor: "rgba(8, 8, 9, 0.94)",
+            borderColor: "rgba(255, 122, 24, 0.45)",
+            borderWidth: 1,
+            titleColor: "#fff4e7",
+            bodyColor: "#e4ddd6",
+            callbacks: {
+              label: function (context) {
+                return `${context.dataset.label}: ${format(Number(context.raw), chart.format)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          r: {
+            min: rankMin,
+            max: rankMax,
+            reverse: Boolean(chart.reverse_scale),
+            angleLines: { color: "rgba(255, 122, 24, 0.16)" },
+            grid: { color: "rgba(255,255,255,0.1)" },
+            pointLabels: {
+              color: "#d9d1c9",
+              font: { size: 12, weight: "700" }
+            },
+            ticks: {
+              stepSize: 1,
+              precision: 0,
+              color: "#a7a19a",
+              backdropColor: "rgba(0,0,0,0)",
+              callback: function (value) {
+                if (!Number.isInteger(Number(value))) return "";
+                return format(Number(value), chart.format);
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function renderQuadrantChart(chart) {
+    const canvas = document.getElementById(chart.id);
+    if (!canvas) return;
+    if (!window.Chart) return fallback(canvas);
+    const xMin = isNumber(chart.x_min) ? chart.x_min : (isNumber(chart.min) ? chart.min : 0);
+    const xMax = isNumber(chart.x_max) ? chart.x_max : (isNumber(chart.max) ? chart.max : 100);
+    const yMin = isNumber(chart.y_min) ? chart.y_min : (isNumber(chart.min) ? chart.min : 0);
+    const yMax = isNumber(chart.y_max) ? chart.y_max : (isNumber(chart.max) ? chart.max : 100);
+    const xMidpoint = isNumber(chart.x_midpoint) ? chart.x_midpoint : (xMin + xMax) / 2;
+    const yMidpoint = isNumber(chart.y_midpoint) ? chart.y_midpoint : (yMin + yMax) / 2;
+    const quadrantPlugin = {
+      id: "quadrantOverlay",
+      beforeDatasetsDraw: function (chartInstance) {
+        const { ctx, chartArea, scales } = chartInstance;
+        if (!chartArea || !scales.x || !scales.y) return;
+        const xMid = scales.x.getPixelForValue(xMidpoint);
+        const yMid = scales.y.getPixelForValue(yMidpoint);
+        const { left, right, top, bottom } = chartArea;
+        ctx.save();
+        ctx.fillStyle = "rgba(255, 177, 94, 0.032)";
+        ctx.fillRect(left, top, xMid - left, yMid - top);
+        ctx.fillStyle = "rgba(125, 227, 141, 0.038)";
+        ctx.fillRect(xMid, top, right - xMid, yMid - top);
+        ctx.fillStyle = "rgba(94, 231, 255, 0.024)";
+        ctx.fillRect(xMid, yMid, right - xMid, bottom - yMid);
+        ctx.fillStyle = "rgba(255, 107, 107, 0.034)";
+        ctx.fillRect(left, yMid, xMid - left, bottom - yMid);
+        ctx.strokeStyle = "rgba(255, 122, 24, 0.62)";
+        ctx.lineWidth = 1.35;
+        ctx.setLineDash([8, 7]);
+        ctx.beginPath();
+        ctx.moveTo(xMid, top);
+        ctx.lineTo(xMid, bottom);
+        ctx.moveTo(left, yMid);
+        ctx.lineTo(right, yMid);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.strokeStyle = "rgba(255,255,255,0.11)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(left, top, right - left, bottom - top);
+        ctx.restore();
+      },
+      afterDraw: function (chartInstance) {
+        const { ctx, chartArea } = chartInstance;
+        if (!chartArea) return;
+        const { left, right, top, bottom } = chartArea;
+        ctx.save();
+        ctx.fillStyle = "rgba(217, 209, 201, 0.82)";
+        ctx.font = "900 10px Inter, sans-serif";
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "right";
+        ctx.fillText("High Profit", left - 10, top + 14);
+        ctx.fillText("Low Profit", left - 10, bottom - 14);
+        ctx.textBaseline = "top";
+        ctx.textAlign = "left";
+        ctx.fillText("High Risk", left + 4, bottom + 12);
+        ctx.textAlign = "right";
+        ctx.fillText("Low Risk", right - 4, bottom + 12);
+        ctx.restore();
+      },
+      afterDatasetsDraw: function (chartInstance) {
+        const { ctx } = chartInstance;
+        ctx.save();
+        ctx.font = "900 12px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        chartInstance.data.datasets.forEach((dataset, datasetIndex) => {
+          const meta = chartInstance.getDatasetMeta(datasetIndex);
+          const point = meta.data && meta.data[0];
+          if (!point) return;
+          const text = dataset.label;
+          const metrics = ctx.measureText(text);
+          const rawPoint = dataset.data && dataset.data[0] ? dataset.data[0] : {};
+          const radius = Number(rawPoint.r) || 18;
+          const labelY = point.y - radius - 8;
+          ctx.fillStyle = "rgba(5, 5, 6, 0.78)";
+          ctx.strokeStyle = "rgba(255,255,255,0.12)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(point.x - metrics.width / 2 - 7, labelY - 17, metrics.width + 14, 18, 4);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = dataset.borderColor;
+          ctx.fillText(text, point.x, labelY - 2);
+        });
+        ctx.restore();
+      }
+    };
+
+    new Chart(canvas, {
+      type: "bubble",
+      data: {
+        datasets: (chart.datasets || []).map((dataset, index) => {
+          const datasetColor = colorForLabel(dataset.label, colors[index % colors.length]);
+          return {
+            label: dataset.label,
+            data: dataset.values || [],
+            backgroundColor: `${datasetColor}38`,
+            borderColor: datasetColor,
+            hoverBackgroundColor: `${datasetColor}66`,
+            borderWidth: 2.4,
+            hoverBorderWidth: 3
+          };
+        })
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+          padding: {
+            top: 18,
+            right: 16,
+            bottom: 42,
+            left: 88
+          }
+        },
+        plugins: {
+          subtitle: {
+            display: true,
+            text: "Bubble size represents valuation attractiveness (larger = more attractive)",
+            color: "#9a9690",
+            font: { size: 12, weight: "700" },
+            padding: { top: 0, bottom: 6 }
+          },
+          legend: {
+            position: "top",
+            labels: {
+              color: "#d9d1c9",
+              boxWidth: 10,
+              boxHeight: 10,
+              usePointStyle: true
+            }
+          },
+          tooltip: {
+            backgroundColor: "rgba(8, 8, 9, 0.94)",
+            borderColor: "rgba(255, 122, 24, 0.45)",
+            borderWidth: 1,
+            titleColor: "#fff4e7",
+            bodyColor: "#e4ddd6",
+            callbacks: {
+              title: function (items) {
+                return items[0] && items[0].raw ? `${items[0].raw.ticker} positioning` : "";
+              },
+              label: function (context) {
+                const point = context.raw || {};
+                return [
+                  `Profitability z-score: ${format(point.profitability_z, "zscore")}`,
+                  `Risk z-score: ${format(point.risk_z, "zscore")}`,
+                  `Profitability sum: ${format(point.profitability_sum, "number")}`,
+                  `Profitability formula: Op Margin + Net Margin + Op Cash/Rev + FCF Margin + ROA + ROE`,
+                  `Risk strength: ${format(point.risk_strength, "number")}`,
+                  `Formula: z(IC) + z(Current Ratio) - z(D/E) - z(CapEx/Rev)`,
+                  `Valuation attractiveness rank: #${point.valuation_rank || "N/A"}`
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            min: xMin,
+            max: xMax,
+            title: {
+              display: true,
+              text: chart.x_title || "Balance Sheet Strength / Low Risk",
+              color: "#d9d1c9",
+              font: { size: 12, weight: "800" }
+            },
+            ticks: {
+              display: false,
+              color: "#8f8982",
+              stepSize: chart.axis_format === "zscore" ? 0.5 : undefined,
+              callback: function (value) {
+                return format(Number(value), chart.axis_format || "number");
+              }
+            },
+            grid: { color: "rgba(255,255,255,0.045)", drawTicks: false }
+          },
+          y: {
+            min: yMin,
+            max: yMax,
+            title: {
+              display: true,
+              text: chart.y_title || "Profitability & Cash Generation",
+              color: "#d9d1c9",
+              font: { size: 12, weight: "800" }
+            },
+            ticks: {
+              display: false,
+              color: "#8f8982",
+              stepSize: chart.axis_format === "zscore" ? 0.5 : undefined,
+              callback: function (value) {
+                return format(Number(value), chart.axis_format || "number");
+              }
+            },
+            grid: { color: "rgba(255,255,255,0.045)", drawTicks: false }
+          }
+        }
+      },
+      plugins: [quadrantPlugin]
     });
   }
 
@@ -255,7 +560,25 @@
     (data.bar_charts || []).forEach(renderBarChart);
     (data.multiple_charts || []).forEach(renderBarChart);
     if (data.bridge_chart) renderGroupedBar(data.bridge_chart);
-    if (data.rank_chart) renderGroupedBar(data.rank_chart);
+    if (data.rank_chart) {
+      if (data.rank_chart.type === "radar") {
+        renderRadarChart(data.rank_chart);
+      } else if (data.rank_chart.type === "quadrant") {
+        renderQuadrantChart(data.rank_chart);
+      } else {
+        renderGroupedBar(data.rank_chart);
+      }
+    }
+    (data.rank_charts || []).forEach((chart) => {
+      if (chart.type === "radar") {
+        renderRadarChart(chart);
+      } else if (chart.type === "quadrant") {
+        renderQuadrantChart(chart);
+      } else {
+        renderGroupedBar(chart);
+      }
+    });
+    if (data.quadrant_chart) renderQuadrantChart(data.quadrant_chart);
     renderModelEbitdaChart();
   }
 

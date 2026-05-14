@@ -4,10 +4,10 @@
 <section class="story-grid">
   <article class="chart-card span-7">
     <div class="section-heading tight">
-      <p class="eyebrow">Rank summary</p>
-      <h2>{{ payload.rank_chart.title }}</h2>
+      <p class="eyebrow">Quadrant positioning map</p>
+      <h2>{{ payload.quadrant_chart.title }}</h2>
     </div>
-    <div class="chart-frame tall"><canvas id="{{ payload.rank_chart.id }}"></canvas></div>
+    <div class="chart-frame tall"><canvas id="{{ payload.quadrant_chart.id }}"></canvas></div>
   </article>
   <article class="insight-stack span-5">
     {% for item in payload.conclusions %}

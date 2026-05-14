@@ -1501,25 +1501,158 @@ def ranking_payload(ratios: pd.DataFrame) -> dict[str, Any]:
 
     conclusions = EDITABLE_TEXT_BOXES["insights"]["conclusion_cards"]
 
-    rank_chart = {
-        "id": "final-rank-chart",
-        "title": "Category Rank Summary",
-        "labels": [item["Display Ticker"] for item in latest.sort_values("Ticker Order").to_dict("records")],
-        "datasets": [],
-        "format": "rank",
-        "direction": "Lower is Better",
-        "color_by": "dataset",
+    rank_lookup = {
+        ranking["key"]: {item["ticker"]: item["rank"] for item in ranking["items"]}
+        for ranking in rankings
     }
-    for ranking in rankings:
-        rank_by_ticker = {item["ticker"]: item["rank"] for item in ranking["items"]}
-        rank_chart["datasets"].append(
+    quadrant_year = 2025
+    quadrant_source = ratios[ratios["Year"] == quadrant_year].copy() if "Year" in ratios.columns else pd.DataFrame()
+    if quadrant_source.empty:
+        quadrant_source = latest.copy()
+        quadrant_year = int(quadrant_source["Year"].max()) if "Year" in quadrant_source.columns and not quadrant_source.empty else 0
+    ordered_companies = (
+        quadrant_source.sort_values(["Ticker Order", "Year"])
+        .groupby("Ticker", as_index=False)
+        .tail(1)
+        .sort_values("Ticker Order")
+    )
+    max_rank = int(len(latest))
+
+    def metric_sum(source: pd.DataFrame, metrics: list[str]) -> pd.Series:
+        parts = [
+            pd.to_numeric(source[metric], errors="coerce")
+            for metric in metrics
+            if metric in source.columns
+        ]
+        if not parts:
+            return pd.Series(np.nan, index=source.index)
+        return pd.concat(parts, axis=1).sum(axis=1, min_count=1)
+
+    def z_score(values: pd.Series) -> pd.Series:
+        numeric = pd.to_numeric(values, errors="coerce")
+        mean = numeric.mean()
+        std = numeric.std(ddof=0)
+        if not np.isfinite(mean) or not np.isfinite(std) or std == 0:
+            return numeric.map(lambda value: 0.0 if pd.notna(value) else np.nan)
+        return (numeric - mean) / std
+
+    def risk_strength_score(
+        source: pd.DataFrame,
+        positive_metrics: list[str],
+        negative_metrics: list[str],
+    ) -> pd.Series:
+        parts = []
+        for metric in positive_metrics:
+            if metric in source.columns:
+                parts.append(z_score(source[metric]))
+        for metric in negative_metrics:
+            if metric in source.columns:
+                parts.append(-z_score(source[metric]))
+        if not parts:
+            return pd.Series(np.nan, index=source.index)
+        return pd.concat(parts, axis=1).sum(axis=1, min_count=1)
+
+    def rank_strength(rank: Any) -> float | None:
+        numeric = safe_float(rank)
+        if numeric is None:
+            return None
+        return max_rank + 1 - numeric
+
+    quadrant_chart = {
+        "id": "final-quadrant-chart",
+        "title": f"{quadrant_year} Profitability vs Risk Positioning",
+        "type": "quadrant",
+        "x_title": "Risk",
+        "y_title": "Profitability",
+        "bubble_title": "Valuation Attractiveness",
+        "axis_format": "zscore",
+        "x_midpoint": None,
+        "y_midpoint": None,
+        "x_min": None,
+        "x_max": None,
+        "y_min": None,
+        "y_max": None,
+        "datasets": [],
+    }
+
+    profitability_metrics = ["Operating Margin", "Net Profit Margin", "Op Cash / Revenue", "FCF Margin", "ROA", "ROE"]
+    positive_risk_metrics = ["Interest Coverage", "Current Ratio"]
+    negative_risk_metrics = ["Debt / Equity", "CapEx / Revenue"]
+    ordered_companies["Profitability Sum"] = metric_sum(ordered_companies, profitability_metrics)
+    ordered_companies["Risk Strength"] = risk_strength_score(
+        ordered_companies,
+        positive_risk_metrics,
+        negative_risk_metrics,
+    )
+    ordered_companies["Profitability Z"] = z_score(ordered_companies["Profitability Sum"])
+    ordered_companies["Risk Z"] = z_score(ordered_companies["Risk Strength"])
+
+    for row_idx, row in ordered_companies.iterrows():
+        ticker = row["Ticker"]
+        display = row["Display Ticker"]
+        profit_cash_sum = safe_float(row.get("Profitability Sum"))
+        risk_strength = safe_float(row.get("Risk Strength"))
+        profitability_z = safe_float(row.get("Profitability Z"))
+        risk_z = safe_float(row.get("Risk Z"))
+        valuation_strength = rank_strength(rank_lookup["valuation"].get(ticker)) or 1
+        quadrant_chart["datasets"].append(
             {
-                "label": ranking["title"],
-                "values": [rank_by_ticker.get(row["Ticker"]) for _, row in latest.sort_values("Ticker Order").iterrows()],
+                "label": display,
+                "values": [
+                    {
+                        "x": risk_z,
+                        "y": profitability_z,
+                        "r": 14 + (valuation_strength * 4),
+                        "ticker": display,
+                        "company": row["Company"],
+                        "risk_strength": risk_strength,
+                        "profitability_sum": profit_cash_sum,
+                        "risk_z": risk_z,
+                        "profitability_z": profitability_z,
+                        "year": int(row["Year"]) if safe_float(row.get("Year")) is not None else quadrant_year,
+                        "profit_cash_sum": profit_cash_sum,
+                        "profitability_rank": rank_lookup["profitability"].get(ticker),
+                        "capital_rank": rank_lookup["capital_intensity"].get(ticker),
+                        "leverage_rank": rank_lookup["leverage_risk"].get(ticker),
+                        "cash_flow_rank": rank_lookup["cash_flow"].get(ticker),
+                        "valuation_rank": rank_lookup["valuation"].get(ticker),
+                    }
+                ],
             }
         )
 
-    return {"rankings": rankings, "conclusions": conclusions, "rank_chart": rank_chart}
+    x_values = [
+        safe_float(dataset["values"][0].get("x"))
+        for dataset in quadrant_chart["datasets"]
+        if dataset.get("values")
+    ]
+    y_values = [
+        safe_float(dataset["values"][0].get("y"))
+        for dataset in quadrant_chart["datasets"]
+        if dataset.get("values")
+    ]
+
+    def symmetric_range(values: list[float | None]) -> tuple[float, float, float]:
+        clean = [value for value in values if value is not None]
+        if not clean:
+            return -1.5, 1.5, 0.0
+        limit = max(1.5, max(abs(value) for value in clean) * 1.18)
+        return -limit, limit, 0.0
+
+    x_min, x_max, x_mid = symmetric_range(x_values)
+    y_min, y_max, y_mid = symmetric_range(y_values)
+    quadrant_chart.update(
+        {
+            "x_min": x_min,
+            "x_max": x_max,
+            "y_min": y_min,
+            "y_max": y_max,
+            "x_midpoint": x_mid,
+            "y_midpoint": y_mid,
+        }
+    )
+
+    return {"rankings": rankings, "conclusions": conclusions, "quadrant_chart": quadrant_chart}
 
 
 def build_pages(

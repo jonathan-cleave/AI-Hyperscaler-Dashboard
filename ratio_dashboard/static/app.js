@@ -482,28 +482,7 @@
             }
           },
           tooltip: {
-            backgroundColor: "rgba(8, 8, 9, 0.94)",
-            borderColor: "rgba(255, 122, 24, 0.45)",
-            borderWidth: 1,
-            titleColor: "#fff4e7",
-            bodyColor: "#e4ddd6",
-            callbacks: {
-              title: function (items) {
-                return items[0] && items[0].raw ? `${items[0].raw.ticker} positioning` : "";
-              },
-              label: function (context) {
-                const point = context.raw || {};
-                return [
-                  `Profitability z-score: ${format(point.profitability_z, "zscore")}`,
-                  `Risk z-score: ${format(point.risk_z, "zscore")}`,
-                  `Profitability sum: ${format(point.profitability_sum, "number")}`,
-                  `Profitability formula: Op Margin + Net Margin + Op Cash/Rev + FCF Margin + ROA + ROE`,
-                  `Risk strength: ${format(point.risk_strength, "number")}`,
-                  `Formula: z(IC) + z(Current Ratio) - z(D/E) - z(CapEx/Rev)`,
-                  `Valuation attractiveness rank: #${point.valuation_rank || "N/A"}`
-                ];
-              }
-            }
+            enabled: false
           }
         },
         scales: {
